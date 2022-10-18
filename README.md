@@ -6,9 +6,12 @@ Code for dimension-reduction project.
 ## Recommended method:
 Steps:
 
-<!-- 1. Clone the repo -->
-<!-- 2. `cd` into the repo (`cd projection_pursuit`) -->
-<!-- 3. Create a virtual environment -->
-<!-- 4. *(Optional/recommended)*: upgrade pip with `pip install --upgrade pip` -->
-<!-- 5. Install the requirements from `requirements.txt` in the `src/projection_pursuit` directory (run `python -m pip install -r src/projection_pursuit/requirements.txt`). -->
-<!-- 6. Install locally using `pip install -e .` -->
+1. Clone the repo
+2. `cd` into the repo (`cd projection_pursuit`)
+3. Create a virtual environment
+4. Install [`poetry`](https://python-poetry.org/) -- suggested method:
+    1. Install [`pipx`](https://pypa.github.io/pipx/)
+    2. Install `poetry` with `pipx install poetry`
+5. *(Optional/recommended)*: upgrade pip with `pip install --upgrade pip`
+6. Activate virtual environment.
+7. Use `poetry` to install: `poetry install`
