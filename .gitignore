@@ -6,3 +6,9 @@
 .vscode/
 
 .virtual_documents/
+
+scripts/.ipynb_checkpoints/
+
+scripts/*.ipynb
+
+src/grassgp/.ipynb_checkpoints/
