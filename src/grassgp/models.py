@@ -209,29 +209,104 @@ from grassgp.grassmann import convert_to_projs
 #         obs=Y,
 #     )
 
-def grassmann_process(s, anchor_point, Omega = None, proj_locs = None, var = None, length = None, noise = None, require_noise: bool = False, jitter: float = 1e-06, proj_jitter: float = 1e-4, L_jitter: float = 1e-8, reorthonormalize: bool = True, b: float = 1.0):
+# def grassmann_process(s, anchor_point, Omega = None, proj_locs = None, var = None, length = None, noise = None, require_noise: bool = False, jitter: float = 1e-06, proj_jitter: float = 1e-4, L_jitter: float = 1e-8, reorthonormalize: bool = True, b: float = 1.0):
+#     D, n = anchor_point.shape
+#     n_s = s.shape[0]
+#     proj_dim = D * n
+
+#     N_projs = n_s * proj_dim
+    
+#     if Omega is None:
+#         # sample Omega
+#         sigmas = numpyro.sample("sigmas", dist.LogNormal(0.0, 1.0).expand([proj_dim]))
+#         L_factor = numpyro.sample("L_factor", dist.LKJ(proj_dim, 1.0)) 
+#         L = numpyro.deterministic("L", L_factor + L_jitter * np.eye(proj_dim))
+#         Omega = numpyro.deterministic("Omega", np.outer(sigmas, sigmas) * L)
+#     else:
+#         Omega = np.array(Omega)
+        
+    
+#     if proj_locs is None:
+#         # sample proj_locs
+#         proj_mean = numpyro.sample("proj_mean", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)))
+#         proj_locs = np.tile(proj_mean, n_s)
+#     else:
+#         proj_locs = np.array(proj_locs)
+        
+#     proj_params = numpyro.sample("standard_proj_params",
+#         dist.MultivariateNormal(covariance_matrix=np.eye(N_projs))
+#     )
+    
+#     if n_s > 1:
+#         # parameters for the kernel of the Grassmann Process
+#         if var is None:
+#             # sample var
+#             var = numpyro.sample("kernel_var", dist.LogNormal(0.0, b))
+        
+#         if length is None:
+#             # sample length
+#             length = numpyro.sample("kernel_length", dist.LogNormal(0.0, b))
+        
+#         if require_noise:
+#             if noise is None:
+#                 # sample noise
+#                 noise = numpyro.sample("kernel_noise", dist.LogNormal(0.0, b))
+            
+#             params = {'var': var, 'length': length, 'noise': noise}
+#             K = rbf(s, s, params, jitter=jitter)
+#         else:
+#             params = {'var': var, 'length': length, 'noise': 0.0}
+#             K = rbf(s, s, params, jitter=jitter)
+        
+#         M = np.kron(K, Omega) + proj_jitter * np.eye(N_projs)
+#         M_chol = lin.cholesky(M)
+#     else:
+#         M_chol = lin.cholesky(Omega)
+    
+    
+#     projection_parameters = numpyro.deterministic("proj_params", proj_locs + M_chol @ proj_params)
+    
+#     # split projection_parameters up into params for each time
+#     projection_parameters_split = np.array(projection_parameters.split(n_s))
+
+#     # unvec each chunk
+#     unvec_Vs = vmap(lambda params: unvec(params, D, n))(projection_parameters_split)
+
+#     # form projector
+#     I_UUT = (np.eye(D) - anchor_point @ anchor_point.T)
+
+#     # apply this to each unvec_V
+#     Deltas = np.einsum('ij,ljk->lik', I_UUT, unvec_Vs)
+
+#     # convert to projections
+#     Ps = numpyro.deterministic("Ps", convert_to_projs(Deltas, anchor_point, reorthonormalize=reorthonormalize))
+    
+#     return Ps
+
+def grassmann_process(s, model_config: dict = {'anchor_point': [[1.0], [0.0]], 'Omega' : None, 'proj_locs' : None, 'var' : None, 'length' : None, 'noise' : None, 'require_noise' : False, 'jitter' : 1e-06, 'proj_jitter' : 1e-4, 'L_jitter' : 1e-8, 'reorthonormalize' : True, 'b' : 1.0}):
+    anchor_point = np.array(model_config['anchor_point'])
     D, n = anchor_point.shape
     n_s = s.shape[0]
     proj_dim = D * n
 
     N_projs = n_s * proj_dim
     
-    if Omega is None:
+    if model_config['Omega'] is None:
         # sample Omega
         sigmas = numpyro.sample("sigmas", dist.LogNormal(0.0, 1.0).expand([proj_dim]))
         L_factor = numpyro.sample("L_factor", dist.LKJ(proj_dim, 1.0)) 
-        L = numpyro.deterministic("L", L_factor + L_jitter * np.eye(proj_dim))
+        L = numpyro.deterministic("L", L_factor + model_config['L_jitter'] * np.eye(proj_dim))
         Omega = numpyro.deterministic("Omega", np.outer(sigmas, sigmas) * L)
     else:
-        Omega = np.array(Omega)
+        Omega = np.array(model_config['Omega'])
         
     
-    if proj_locs is None:
+    if model_config['proj_locs'] is None:
         # sample proj_locs
         proj_mean = numpyro.sample("proj_mean", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)))
         proj_locs = np.tile(proj_mean, n_s)
     else:
-        proj_locs = np.array(proj_locs)
+        proj_locs = np.array(model_config['proj_locs'])
         
     proj_params = numpyro.sample("standard_proj_params",
         dist.MultivariateNormal(covariance_matrix=np.eye(N_projs))
@@ -239,26 +314,32 @@ def grassmann_process(s, anchor_point, Omega = None, proj_locs = None, var = Non
     
     if n_s > 1:
         # parameters for the kernel of the Grassmann Process
-        if var is None:
+        if model_config['var'] is None:
             # sample var
-            var = numpyro.sample("kernel_var", dist.LogNormal(0.0, b))
+            var = numpyro.sample("kernel_var", dist.LogNormal(0.0, model_config['b']))
+        else:
+            var = model_config['var']
         
-        if length is None:
+        if model_config['length'] is None:
             # sample length
-            length = numpyro.sample("kernel_length", dist.LogNormal(0.0, b))
+            length = numpyro.sample("kernel_length", dist.LogNormal(0.0, model_config['b']))
+        else:
+            length = model_config['length']
         
-        if require_noise:
-            if noise is None:
+        if model_config['require_noise']:
+            if model_config['noise'] is None:
                 # sample noise
-                noise = numpyro.sample("kernel_noise", dist.LogNormal(0.0, b))
+                noise = numpyro.sample("kernel_noise", dist.LogNormal(0.0, model_config['b']))
+            else:
+                noise = model_config['noise']
             
             params = {'var': var, 'length': length, 'noise': noise}
-            K = rbf(s, s, params, jitter=jitter)
+            K = rbf(s, s, params, jitter=model_config['jitter'])
         else:
             params = {'var': var, 'length': length, 'noise': 0.0}
-            K = rbf(s, s, params, jitter=jitter)
+            K = rbf(s, s, params, jitter=model_config['jitter'])
         
-        M = np.kron(K, Omega) + proj_jitter * np.eye(N_projs)
+        M = np.kron(K, Omega) + model_config['proj_jitter'] * np.eye(N_projs)
         M_chol = lin.cholesky(M)
     else:
         M_chol = lin.cholesky(Omega)
@@ -279,6 +360,6 @@ def grassmann_process(s, anchor_point, Omega = None, proj_locs = None, var = Non
     Deltas = np.einsum('ij,ljk->lik', I_UUT, unvec_Vs)
 
     # convert to projections
-    Ps = numpyro.deterministic("Ps", convert_to_projs(Deltas, anchor_point, reorthonormalize=reorthonormalize))
+    Ps = numpyro.deterministic("Ps", convert_to_projs(Deltas, anchor_point, reorthonormalize=model_config['reorthonormalize']))
     
     return Ps
