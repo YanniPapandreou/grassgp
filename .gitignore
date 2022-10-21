@@ -14,3 +14,5 @@ scripts/*.ipynb
 src/grassgp/.ipynb_checkpoints/
 
 scripts/configs/.ipynb_checkpoints/
+
+scripts/untitled.py

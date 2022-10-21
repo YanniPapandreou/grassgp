@@ -1,6 +1,6 @@
 # from typing import Callable
-# from itertools import product
-# import jax.numpy as np
+from itertools import product
+import jax.numpy as np
 from jax import random, vmap
 
 # from grassgp.utils import vec, unvec
@@ -12,6 +12,12 @@ from grassgp.kernels import rbf
 import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import Predictive
+
+def generate_input_data(D: int = 2, active_dimension: int = 1, n_s: int = 10, s_lims: tuple = (0.0, 1.0), x_lims: tuple = (-2, 2), n_x_sqrt: int = 50):
+    s = np.linspace(s_lims[0], s_lims[1], n_s)
+    x_range = np.linspace(x_lims[0], x_lims[1], n_x_sqrt)
+    X = np.array([v for v in product(x_range, repeat=D)])
+    return X, s
 
 
 def gen_from_univariate_gp(x, gp_config: dict = {'seed': 4357, 'm': zero_mean, 'k': rbf, 'params': {'var': 1.0, 'length': 1.0, 'noise': 0.01}, 'jitter': 1e-08, 'include_noise': True}):

@@ -187,12 +187,21 @@ def load_and_convert_to_samples_dict(path: str):
     return samples
 
 
+# def get_save_path(head: str, main_name: str):
+#     date = datetime.datetime.now()
+#     suffix = f"{date.strftime('%Y-%m-%d--%H:%M')}"
+#     suffix = f"{main_name}_{suffix}"
+#     path = os.path.join(head, suffix)
+#     return path
+
 def get_save_path(head: str, main_name: str):
-    date = datetime.datetime.now()
-    suffix = f"{date.strftime('%Y-%m-%d--%H:%M')}"
-    suffix = f"{main_name}_{suffix}"
-    path = os.path.join(head, suffix)
+    # date = datetime.datetime.now()
+    # suffix = f"{date.strftime('%Y-%m-%d--%H:%M')}"
+    # suffix = f"{main_name}_{suffix}"
+    path = os.path.join(head, main_name)
     return path
+
+
 
 
 def subspace_angle(v):

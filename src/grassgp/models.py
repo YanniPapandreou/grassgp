@@ -283,30 +283,30 @@ from grassgp.grassmann import convert_to_projs
     
 #     return Ps
 
-def grassmann_process(s, model_config: dict = {'anchor_point': [[1.0], [0.0]], 'Omega' : None, 'proj_locs' : None, 'var' : None, 'length' : None, 'noise' : None, 'require_noise' : False, 'jitter' : 1e-06, 'proj_jitter' : 1e-4, 'L_jitter' : 1e-8, 'reorthonormalize' : True, 'b' : 1.0}):
-    anchor_point = np.array(model_config['anchor_point'])
+def grassmann_process(s, grass_config: dict = {'anchor_point': [[1.0], [0.0]], 'Omega' : None, 'proj_locs' : None, 'var' : None, 'length' : None, 'noise' : None, 'require_noise' : False, 'jitter' : 1e-06, 'proj_jitter' : 1e-4, 'L_jitter' : 1e-8, 'reorthonormalize' : True, 'b' : 1.0}):
+    anchor_point = np.array(grass_config['anchor_point'])
     D, n = anchor_point.shape
     n_s = s.shape[0]
     proj_dim = D * n
 
     N_projs = n_s * proj_dim
     
-    if model_config['Omega'] is None:
+    if grass_config['Omega'] is None:
         # sample Omega
         sigmas = numpyro.sample("sigmas", dist.LogNormal(0.0, 1.0).expand([proj_dim]))
         L_factor = numpyro.sample("L_factor", dist.LKJ(proj_dim, 1.0)) 
-        L = numpyro.deterministic("L", L_factor + model_config['L_jitter'] * np.eye(proj_dim))
+        L = numpyro.deterministic("L", L_factor + grass_config['L_jitter'] * np.eye(proj_dim))
         Omega = numpyro.deterministic("Omega", np.outer(sigmas, sigmas) * L)
     else:
-        Omega = np.array(model_config['Omega'])
+        Omega = np.array(grass_config['Omega'])
         
     
-    if model_config['proj_locs'] is None:
+    if grass_config['proj_locs'] is None:
         # sample proj_locs
         proj_mean = numpyro.sample("proj_mean", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)))
         proj_locs = np.tile(proj_mean, n_s)
     else:
-        proj_locs = np.array(model_config['proj_locs'])
+        proj_locs = np.array(grass_config['proj_locs'])
         
     proj_params = numpyro.sample("standard_proj_params",
         dist.MultivariateNormal(covariance_matrix=np.eye(N_projs))
@@ -314,32 +314,32 @@ def grassmann_process(s, model_config: dict = {'anchor_point': [[1.0], [0.0]], '
     
     if n_s > 1:
         # parameters for the kernel of the Grassmann Process
-        if model_config['var'] is None:
+        if grass_config['var'] is None:
             # sample var
-            var = numpyro.sample("kernel_var", dist.LogNormal(0.0, model_config['b']))
+            var = numpyro.sample("kernel_var", dist.LogNormal(0.0, grass_config['b']))
         else:
-            var = model_config['var']
+            var = grass_config['var']
         
-        if model_config['length'] is None:
+        if grass_config['length'] is None:
             # sample length
-            length = numpyro.sample("kernel_length", dist.LogNormal(0.0, model_config['b']))
+            length = numpyro.sample("kernel_length", dist.LogNormal(0.0, grass_config['b']))
         else:
-            length = model_config['length']
+            length = grass_config['length']
         
-        if model_config['require_noise']:
-            if model_config['noise'] is None:
+        if grass_config['require_noise']:
+            if grass_config['noise'] is None:
                 # sample noise
-                noise = numpyro.sample("kernel_noise", dist.LogNormal(0.0, model_config['b']))
+                noise = numpyro.sample("kernel_noise", dist.LogNormal(0.0, grass_config['b']))
             else:
-                noise = model_config['noise']
+                noise = grass_config['noise']
             
             params = {'var': var, 'length': length, 'noise': noise}
-            K = rbf(s, s, params, jitter=model_config['jitter'])
+            K = rbf(s, s, params, jitter=grass_config['jitter'])
         else:
             params = {'var': var, 'length': length, 'noise': 0.0}
-            K = rbf(s, s, params, jitter=model_config['jitter'])
+            K = rbf(s, s, params, jitter=grass_config['jitter'])
         
-        M = np.kron(K, Omega) + model_config['proj_jitter'] * np.eye(N_projs)
+        M = np.kron(K, Omega) + grass_config['proj_jitter'] * np.eye(N_projs)
         M_chol = lin.cholesky(M)
     else:
         M_chol = lin.cholesky(Omega)
@@ -360,6 +360,6 @@ def grassmann_process(s, model_config: dict = {'anchor_point': [[1.0], [0.0]], '
     Deltas = np.einsum('ij,ljk->lik', I_UUT, unvec_Vs)
 
     # convert to projections
-    Ps = numpyro.deterministic("Ps", convert_to_projs(Deltas, anchor_point, reorthonormalize=model_config['reorthonormalize']))
+    Ps = numpyro.deterministic("Ps", convert_to_projs(Deltas, anchor_point, reorthonormalize=grass_config['reorthonormalize']))
     
     return Ps

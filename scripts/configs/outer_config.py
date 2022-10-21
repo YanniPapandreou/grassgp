@@ -8,7 +8,7 @@ outer_gp_config = {
     'seed': 4357,
     'm': zero_mean,
     'k': rbf,
-    'params': {'var': 1.0, 'length': 1.0, 'noise': 0.01},
+    'params': {'var': 1.0, 'length': 0.5, 'noise': 0.1},
     'jitter': 1e-08,
     'include_noise': True
 }

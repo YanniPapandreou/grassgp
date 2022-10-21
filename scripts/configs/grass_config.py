@@ -6,7 +6,7 @@ grass_model_config_full_reortho_b_1 = {
     'Omega' : None, 
     'proj_locs' : None,
     'var' : 1.0,
-    'length' : None,
+    'length' : 0.5,
     'noise' : 0.1,
     'require_noise' : False,
     'jitter' : 1e-06,
@@ -16,4 +16,4 @@ grass_model_config_full_reortho_b_1 = {
     'b' : 1.0
 }
 
-GrassConf = builds(grassmann_process, model_config = grass_model_config_full_reortho_b_1, zen_partial=True)
+GrassConf = builds(grassmann_process, grass_config = grass_model_config_full_reortho_b_1, zen_partial=True)
