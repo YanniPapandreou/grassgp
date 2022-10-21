@@ -1,10 +1,13 @@
+from json import load
 import os
 import datetime
 import jax.numpy as np
 from jax import jit
 import jax.numpy.linalg as lin
 from functools import partial
+from pathlib import Path
 
+from hydra_zen import load_from_yaml
 
 @jit
 def vec(X):
@@ -202,8 +205,6 @@ def get_save_path(head: str, main_name: str):
     return path
 
 
-
-
 def subspace_angle(v):
     x, y = v
     alpha = np.arctan2(y[0], x[0])
@@ -212,3 +213,9 @@ def subspace_angle(v):
     else:
         return alpha
 
+
+def get_config_and_data(path: Path):
+    config = load_from_yaml(path / ".hydra" / "config.yaml")
+    overrides = load_from_yaml(path / ".hydra" / "overrides.yaml")
+    data = load_and_convert_to_samples_dict(str(path / "dataset.npz"))
+    return {'config': config, 'overrides': overrides, 'data': data}
