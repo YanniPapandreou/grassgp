@@ -28,17 +28,23 @@ print(to_yaml(Config))
     Config,
     generate_dataset,
     overrides=[
-        "gen_projs_from_prior=True,False",
         "inner_model.grass_config.reorthonormalize=True,False",
-        f"inner_model.grass_config.Omega=None,{np.eye(2).tolist()}",
-        f"inner_model.grass_config.proj_locs=None,{np.zeros(2*1*10).tolist()}"
+        f"inner_model.grass_config.Omega=null,{np.eye(2).tolist()}",
+        f"inner_model.grass_config.proj_locs=null,{np.zeros(2*1*10).tolist()}"
     ],
     multirun=True,
     version_base="1.1"
 )
 
 # %%
-job.status
+job_rotate = launch(
+    Config,
+    generate_dataset,
+    overrides=[
+        "gen_projs_from_prior=False"
+    ],
+    version_base="1.1"
+)
 
 # %%
 from pathlib import Path
@@ -46,6 +52,28 @@ def print_file(x: Path):
     with x.open("r") as f:
         print(f.read())
 
+
+# %%
+import os
+
+# %%
+path = Path(os.getcwd()) / "multirun" / "2022-10-21" / "13-37-25"
+
+# %%
+sorted(path.glob("*"))
+
+# %%
+
+# %%
+for i in range(8):
+    my_path = path / f"{i}"
+    paths_list = sorted(my_path.glob("*"))
+    if len(paths_list) == 2:
+        print(i)
+        print_file(my_path / ".hydra" / "overrides.yaml")
+
+# %%
+path 
 
 # %%
 job_dir = Path(job.working_dir)
