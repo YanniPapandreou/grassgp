@@ -21,7 +21,21 @@ import matplotlib.pyplot as plt
 plt.rcParams["figure.figsize"] = (12,8)
 
 # %%
-job = launch(Config, generate_dataset, version_base="1.1")
+print(to_yaml(Config))
+
+# %%
+(jobs,) = launch(
+    Config,
+    generate_dataset,
+    overrides=[
+        "gen_projs_from_prior=True,False",
+        "inner_model.grass_config.reorthonormalize=True,False",
+        f"inner_model.grass_config.Omega=None,{np.eye(2).tolist()}",
+        f"inner_model.grass_config.proj_locs=None,{np.zeros(2*1*10).tolist()}"
+    ],
+    multirun=True,
+    version_base="1.1"
+)
 
 # %%
 job.status
