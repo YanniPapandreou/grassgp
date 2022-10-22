@@ -36,17 +36,26 @@ def print_file(x: Path):
 
 
 # %%
-path = Path(os.getcwd()) / "multirun" / "2022-10-21" / "13-52-35" 
+path = Path(os.getcwd()) / "multirun" / "2022-10-21" / "15-35-19" 
 
 # %%
 paths = [path / f"{i}" for i in range(8)]
-paths.append(Path(os.getcwd()) / "outputs" / "2022-10-21" / "14-03-06")
+paths.append(Path(os.getcwd()) / "outputs" / "2022-10-21" / "15-49-09")
 paths
 
 # %%
 configs_and_datasets = {path.name:get_config_and_data(path) for path in paths}
 
 # %%
+for key, config_and_dataset in configs_and_datasets.items():
+    config = config_and_dataset['config']
+    overrides = config_and_dataset['overrides']
+    print(f"key = {key}\n")
+    for override in overrides:
+        print(override)
+    print("\n")
+
+# %% jupyter={"outputs_hidden": true} tags=[]
 for key, config_and_dataset in configs_and_datasets.items():
     config = config_and_dataset['config']
     overrides = config_and_dataset['overrides']
