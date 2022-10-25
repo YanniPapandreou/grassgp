@@ -1,6 +1,4 @@
-from json import load
 import os
-import datetime
 import jax.numpy as np
 from jax import jit
 import jax.numpy.linalg as lin

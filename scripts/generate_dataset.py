@@ -15,15 +15,15 @@ from grassgp.generate_data import generate_input_data
 from grassgp.utils import safe_save_jax_array_dict as safe_save
 
 
-from configs.grass_config import GrassConf
-from configs.outer_config import OuterGPConf
+from grassgp.configs.grass_config import GrassConfFullReortho_b_1
+from grassgp.configs.outer_config import OuterGPConf
 
 # %%
 InputDataConf = builds(generate_input_data, populate_full_signature=True)
 
 Config = make_config(
     input_data_conf = InputDataConf,
-    inner_model = GrassConf,
+    inner_model = GrassConfFullReortho_b_1,
     outer_model = OuterGPConf,
     inner_seed = 658769,
     gen_projs_from_prior = True,
@@ -53,6 +53,9 @@ def generate_dataset(cfg):
         pred = prior(projs_key, s=s)
         Ps = pred['Ps'][0]
         data['anchor_point'] = anchor_point
+        for key, value in pred.items():
+            if key != 'Ps':
+                data[f"grass-{key}"] = value
         data['Ps'] = Ps
     else:
         k = cfg.k

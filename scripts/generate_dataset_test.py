@@ -15,8 +15,8 @@ from grassgp.utils import subspace_angle, unvec
 from grassgp.generate_data import generate_input_data
 import matplotlib.pyplot as plt
 
-from configs.grass_config import GrassConf
-from configs.outer_config import OuterGPConf
+from grassgp.configs.grass_config import GrassConfFullReortho_b_1
+from grassgp.configs.outer_config import OuterGPConf
 
 # from hydra_zen import builds, instantiate, to_yaml
 from hydra_zen import make_custom_builds_fn, instantiate, to_yaml, builds, make_config, ZenField
@@ -81,7 +81,7 @@ InputDataConf = builds(generate_input_data, populate_full_signature=True)
 
 Conf = make_config(
     input_data_conf = InputDataConf,
-    inner_model = GrassConf,
+    inner_model = GrassConfFullReortho_b_1,
     outer_model = OuterGPConf,
     inner_seed = 658769,
     gen_projs_from_prior = True,

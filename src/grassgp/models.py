@@ -6,7 +6,7 @@ import numpyro
 import numpyro.distributions as dist
 
 from grassgp.utils import unvec
-from grassgp.kernels import rbf, spatio_temporal_matern_52 
+from grassgp.kernels import rbf
 from grassgp.grassmann import convert_to_projs
 
 # def grassmann_process(s, anchor_point, model_params = {}, jitter=1e-06, proj_jitter=1e-4, L_jitter=1e-8, require_noise = False, reorthonormalize = True, b = 1.0):
@@ -363,3 +363,38 @@ def grassmann_process(s, grass_config: dict = {'anchor_point': [[1.0], [0.0]], '
     Ps = numpyro.deterministic("Ps", convert_to_projs(Deltas, anchor_point, reorthonormalize=grass_config['reorthonormalize']))
     
     return Ps
+
+
+def univariate_gp_model(x, y, gp_config: dict = {'params': {'var': None, 'length': None, 'noise': None}, 'jitter': 1e-06, 'b': 10.0}):
+    params = gp_config['params']
+    
+    # # loop over params and sample any missing
+    # for param, value in params.items():
+    #     if value is None:
+    #         params[param] = numpyro.sample(f"kernel_{param}", dist.LogNormal(0.0, gp_config['b']))
+    # numpyro.sample(f"kernel_{param}", dist.LogNormal(0.0, gp_config['b']))
+    
+    if params['var'] is None:
+        var = numpyro.sample("kernel_var", dist.LogNormal(0.0, gp_config['b']))
+    else:
+        var = params['var']
+        
+    if params['length'] is None:
+        length = numpyro.sample("kernel_length", dist.LogNormal(0.0, gp_config['b']))
+    else:
+        length = params['length']
+        
+    if params['noise'] is None:
+        noise = numpyro.sample("kernel_noise", dist.LogNormal(0.0, gp_config['b']))
+    else:
+        noise = params['noise']
+
+    kernel_params = {'var': var, 'length': length, 'noise': noise}
+    K = rbf(x, x, kernel_params, jitter = gp_config['jitter'])
+    
+    # sample Y according to the standard gaussian process formula
+    numpyro.sample(
+        "obs_y",
+        dist.MultivariateNormal(loc=np.zeros(K.shape[0]), covariance_matrix=K),
+        obs=y,
+    )   
