@@ -18,10 +18,10 @@
 # # %autoreload 2
 
 # %%
-import os
-from pathlib import Path
+# import os
+# from pathlib import Path
 
-from hydra_zen import launch, to_yaml, load_from_yaml
+from hydra_zen import launch 
 from train import Config, train
 import jax.numpy as np
 
@@ -44,7 +44,7 @@ assert dataset_paths_override.split(',') == dataset_paths
 # %%
 (jobs,) = launch(
     Config,
-    generate_dataset,
+    train,
     overrides=[
         f"dataset_path={dataset_paths_override}",
         # "subsample_conf.random=True,False",
