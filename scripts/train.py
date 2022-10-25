@@ -99,17 +99,17 @@ def run_svi_for_map(rng_key, model, maxiter, step_size, *args):
 # %%
 ########################################
 ### Choose default dataset here ########
-base_path = Path(os.getcwd()) / "multirun" / "2022-10-22" / "23-06-22"
+base_path = Path(os.getcwd()) / "multirun" / "2022-10-25" / "22-58-44"
 key_path = "0"
 path = base_path / key_path
 ########################################
 
 SubsampleConfig = make_config(
     random = False,
-    n_x_samples = None,
+    n_x_samples = 49,
     x_gap = 8,
     s_gap = 2,
-    seed = None
+    seed = 235
 )
 
 SVIConfig = make_config(
@@ -120,11 +120,11 @@ SVIConfig = make_config(
 
 TrainConfig = make_config(
     seed = 9870687,
-    n_warmup = 1000,
-    n_samples = 1000,
+    n_warmup = 2000,
+    n_samples = 4000,
     n_chains = 1,
     n_thinning = 2,
-    n_subsample_gap = 4,
+    n_subsample_gap = 1,
 )
 
 Config = make_config(
