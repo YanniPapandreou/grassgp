@@ -32,9 +32,7 @@ dataset_paths.append('/home/yanni/projects/grassgp/scripts/outputs/2022-10-25/23
 
 dataset_paths_override = ""
 for i, path in enumerate(dataset_paths):
-    if i == 0:
-        dataset_paths_override += f"{path},"
-    elif i != 8:
+    if i == 8:
         dataset_paths_override += f"{path},"
     else:
         dataset_paths_override += f"{path}"

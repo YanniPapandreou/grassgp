@@ -1,9 +1,9 @@
 import os
+import pathlib
 import jax.numpy as np
 from jax import jit
 import jax.numpy.linalg as lin
 from functools import partial
-from pathlib import Path
 
 from hydra_zen import load_from_yaml
 
@@ -212,7 +212,10 @@ def subspace_angle(v):
         return alpha
 
 
-def get_config_and_data(path: Path):
+def get_config_and_data(path):
+    if type(path) != pathlib.PosixPath:
+        path = pathlib.Path(path)
+
     config = load_from_yaml(path / ".hydra" / "config.yaml")
     overrides = load_from_yaml(path / ".hydra" / "overrides.yaml")
     data = load_and_convert_to_samples_dict(str(path / "dataset.npz"))
