@@ -22,6 +22,7 @@ import time
 from hydra_zen import instantiate, make_config
 from pathlib import Path
 import os
+import sys
 import jax.numpy as np
 from jax import random
 
@@ -120,11 +121,11 @@ SVIConfig = make_config(
 
 TrainConfig = make_config(
     seed = 9870687,
-    n_warmup = 2000,
-    n_samples = 4000,
+    n_warmup = 1000,
+    n_samples = 1000,
     n_chains = 1,
     n_thinning = 2,
-    n_subsample_gap = 1,
+    n_subsample_gap = 4,
 )
 
 Config = make_config(
@@ -212,6 +213,11 @@ def train(cfg):
     n_subsample_gap = cfg.train.n_subsample_gap
     print("HMC starting.")
     mcmc = run_inference(train_key, mcmc_config, model, X, s, Ys, n_subsample_gap)
+    original_stdout = sys.stdout
+    with open('hmc_log.txt', 'w') as f:
+        sys.stdout = f
+        mcmc.print_summary()
+        sys.stdout = original_stdout
     
     samples = mcmc.get_samples()
     inference_data = samples.copy()
@@ -222,6 +228,8 @@ def train(cfg):
     main_name = "inference_data"
     path = get_save_path(head, main_name)
     try:
-        safe_save(path, data)
+        safe_save(path, inference_data)
     except FileExistsError:
         print("File exists so not saving.")
+
+# %%

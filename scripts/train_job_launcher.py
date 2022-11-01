@@ -44,12 +44,13 @@ assert dataset_paths_override.split(',') == dataset_paths
     Config,
     train,
     overrides=[
+        f"train.n_subsample_gap=2",
         f"dataset_path={dataset_paths_override}",
         # "subsample_conf.random=True,False",
         # f"inner_model.grass_config.anchor_point={np.eye(2,1).tolist()},{np.array([[0.],[1.]]).tolist()}",
         "inner_model.grass_config.reorthonormalize=True,False",
         f"inner_model.grass_config.Omega=null,{np.eye(2).tolist()}",
-        f"inner_model.grass_config.proj_locs=null,{np.zeros(2*1*10).tolist()}"
+        f"inner_model.grass_config.proj_locs=null,{np.zeros(2*1*5).tolist()}"
     ],
     multirun=True,
     version_base="1.1"

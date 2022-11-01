@@ -1,0 +1,5 @@
+- train.n_subsample_gap=2
+- dataset_path=/home/yanni/projects/grassgp/scripts/multirun/2022-10-25/22-58-44/0
+- inner_model.grass_config.reorthonormalize=True
+- inner_model.grass_config.Omega=null
+- inner_model.grass_config.proj_locs=null
