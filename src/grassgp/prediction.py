@@ -9,7 +9,41 @@ from grassgp.utils import vec, unvec, kron_solve
 from grassgp.kernels import rbf
 import numpyro.distributions as dist
 
-def predict_at_train_locs(rng_key, X, s, Ys, X_test, var, length, noise, Ps, jitter=7.5e-4):
+# def predict_at_train_locs(rng_key, X, s, Ys, X_test, var, length, noise, Ps, jitter=7.5e-4):
+#     """function to predict at train locs"""
+#     n_s = s.shape[0]
+
+#     # project train, test data at each train loc
+#     X_projs = np.einsum('ij,ljk->lik', X, Ps)
+#     X_test_projs = np.einsum('ij,ljk->lik', X_test, Ps)
+    
+#     # group these over all locs into long vectors
+#     Train = np.vstack([X_projs[i,:,:] for i in range(n_s)])
+#     Test = np.vstack([X_test_projs[i,:,:] for i in range(n_s)])
+    
+#     # compute kernels between train and test data
+#     params = {'var': var, 'length': length, 'noise': noise}
+#     # K_pp = rbf_covariance(Test, Test, var, length, noise, include_noise=False)
+#     # K_pt = rbf_covariance(Test, Train, var, length, noise, include_noise=False)
+#     # K_tt = rbf_covariance(Train, Train, var, length, noise)
+#     K_pp = rbf(Test, Test, params, include_noise=False)
+#     K_pt = rbf(Test, Train, params, include_noise=False)
+#     K_tt = rbf(Train, Train, params)
+
+#     # perform conditioning
+#     # covariance
+#     K = K_pp - np.matmul(K_pt, lin.solve(K_tt, np.transpose(K_pt)))
+    
+#     # mean
+#     means = np.matmul(K_pt, lin.solve(K_tt, vec(Ys)))
+    
+#     # predictions
+#     preds = dist.MultivariateNormal(loc=means,covariance_matrix=K + jitter * np.eye(K.shape[0])).sample(rng_key)
+
+#     # return unveced means and preds
+#     return unvec(means, X_test.shape[0], n_s), unvec(preds, X_test.shape[0], n_s)
+
+def predict_at_train_locs(X_test, X, s, Ys, rng_key, Ps, var, length, noise, jitter=7.5e-4):
     """function to predict at train locs"""
     n_s = s.shape[0]
 
@@ -44,14 +78,45 @@ def predict_at_train_locs(rng_key, X, s, Ys, X_test, var, length, noise, Ps, jit
     return unvec(means, X_test.shape[0], n_s), unvec(preds, X_test.shape[0], n_s)
 
 ## function to run prediction at train locs
-def run_prediction_train_locs(pred_key, X, s, Ys, samples:dict, jitter=7.5e-4, know_reg_params: bool = True, params: dict = None):
-    """function to run prediction at train locs"""
-    if know_reg_params and params:
-        vmap_args = (random.split(pred_key, samples['grass-Ps'].shape[0]), samples['grass-Ps'])
-        means, predictions = vmap(lambda rng_key, Ps: predict_at_train_locs(rng_key, X, s, Ys, X, params['var'], params['length'], params['noise'], Ps, jitter=jitter))(*vmap_args)
-    elif not know_reg_params:
-        vmap_args = (random.split(pred_key, samples['grass-Ps'].shape[0]), samples['reg-var'], samples['reg-length'], samples['reg-noise'], samples['grass-Ps'])
-        means, predictions = vmap(lambda rng_key, var, length, noise, Ps: predict_at_train_locs(rng_key, X, s, Ys, X, var, length, noise, Ps, jitter=jitter))(*vmap_args)
+# def run_prediction_train_locs(pred_key, X, s, Ys, samples:dict, jitter=7.5e-4, know_reg_params: bool = True, params: dict = None):
+#     """function to run prediction at train locs"""
+#     if know_reg_params and params:
+#         vmap_args = (random.split(pred_key, samples['grass-Ps'].shape[0]), samples['grass-Ps'])
+#         means, predictions = vmap(lambda rng_key, Ps: predict_at_train_locs(rng_key, X, s, Ys, X, params['var'], params['length'], params['noise'], Ps, jitter=jitter))(*vmap_args)
+#     elif not know_reg_params:
+#         vmap_args = (random.split(pred_key, samples['grass-Ps'].shape[0]), samples['reg-var'], samples['reg-length'], samples['reg-noise'], samples['grass-Ps'])
+#         means, predictions = vmap(lambda rng_key, var, length, noise, Ps: predict_at_train_locs(rng_key, X, s, Ys, X, var, length, noise, Ps, jitter=jitter))(*vmap_args)
+#     return means, predictions
+
+def run_prediction_at_train_times(pred_key, X_test, X, s, Ys, cfg, samples:dict, jitter=7.5e-4):    
+    # get number of samples
+    n_samples = cfg.train.n_samples // cfg.train.n_thinning
+    Ps_samples = samples['grass-Ps']
+    assert n_samples == Ps_samples.shape[0]
+    
+    # initialize vmap_args
+    vmap_args = (random.split(pred_key, n_samples), Ps_samples)
+
+    cfg_var = cfg.outer_model.gp_config.params.var
+    cfg_length = cfg.outer_model.gp_config.params.length
+    cfg_noise = cfg.outer_model.gp_config.params.noise
+    
+    if cfg_var is None:
+        vmap_args += (samples['reg-kernel_var'],)
+    else:
+        vmap_args += (cfg_var * np.ones(n_samples),)
+        
+    if cfg_length is None:
+        vmap_args += (samples['reg-kernel_length'],)
+    else:
+        vmap_args += (cfg_length * np.ones(n_samples),)
+        
+    if cfg_noise is None:
+        vmap_args += (samples['reg-kernel_noise'],)
+    else:
+        vmap_args += (cfg_noise * np.ones(n_samples),)
+    
+    means, predictions = vmap(lambda key, Ps, var, length, noise: predict_at_train_locs(X_test, X, s, Ys, key, Ps, var, length, noise, jitter=jitter))(*vmap_args)
     return means, predictions
 
 ## function to perform prediction for the grassmann process
