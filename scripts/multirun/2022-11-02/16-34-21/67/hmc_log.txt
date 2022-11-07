@@ -1,0 +1,19 @@
+
+                                   mean       std    median      5.0%     95.0%     n_eff     r_hat
+          grass-kernel_length      0.30      0.21      0.31      0.00      0.55     34.12      1.00
+             grass-kernel_var      5.40      9.92      2.25      0.45     14.49    100.52      1.02
+grass-standard_proj_params[0]      0.01      1.04     -0.01     -1.65      1.68    259.20      1.00
+grass-standard_proj_params[1]     -0.01      0.03     -0.01     -0.06      0.02    228.22      1.00
+grass-standard_proj_params[2]      0.01      1.03      0.01     -1.73      1.51    291.87      1.00
+grass-standard_proj_params[3]      1.48      0.55      1.44      0.71      2.40     69.82      1.03
+grass-standard_proj_params[4]     -0.03      1.00     -0.03     -1.70      1.61    307.92      1.00
+grass-standard_proj_params[5]      0.21      1.06      0.17     -1.37      1.95     38.17      1.00
+grass-standard_proj_params[6]      0.01      0.98      0.02     -1.53      1.58    303.96      1.00
+grass-standard_proj_params[7]     -0.26      0.75     -0.37     -1.32      1.03     37.99      1.00
+grass-standard_proj_params[8]     -0.04      1.02     -0.08     -1.75      1.59    314.93      1.00
+grass-standard_proj_params[9]     -0.69      0.63     -0.71     -1.67      0.38     69.16      1.02
+            reg-kernel_length      0.30      0.07      0.29      0.18      0.38    194.74      1.00
+             reg-kernel_noise      0.26      0.04      0.26      0.19      0.34    266.89      1.00
+               reg-kernel_var      1.10      0.54      0.96      0.45      1.86    237.97      1.00
+
+Number of divergences: 0

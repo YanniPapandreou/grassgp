@@ -1,0 +1,25 @@
+
+                                   mean       std    median      5.0%     95.0%     n_eff     r_hat
+          grass-L_factor[0,0]      1.00      0.00      1.00      1.00      1.00       nan       nan
+          grass-L_factor[0,1]     -0.06      0.61     -0.10     -1.00      0.82    204.17      1.00
+          grass-L_factor[1,0]     -0.06      0.61     -0.10     -1.00      0.82    204.17      1.00
+          grass-L_factor[1,1]      1.00      0.00      1.00      1.00      1.00    291.78      1.00
+          grass-kernel_length      1.81      1.11      1.57      0.52      3.03    241.53      1.01
+             grass-kernel_var      6.19     42.84      0.67      0.00      9.46    423.51      1.00
+              grass-sigmas[0]      1.59      1.96      1.02      0.05      3.63    430.68      1.00
+              grass-sigmas[1]      1.37      1.50      0.96      0.09      2.82    461.48      1.00
+grass-standard_proj_params[0]      0.09      1.07      0.12     -1.48      1.95    225.58      1.00
+grass-standard_proj_params[1]     -0.79      0.78     -0.78     -2.11      0.42    313.26      1.00
+grass-standard_proj_params[2]     -0.12      0.94     -0.22     -1.50      1.63    335.73      1.00
+grass-standard_proj_params[3]      0.66      0.65      0.67     -0.42      1.66    433.15      1.01
+grass-standard_proj_params[4]      0.00      0.98     -0.00     -1.70      1.59    323.08      1.01
+grass-standard_proj_params[5]      0.06      0.78      0.02     -1.10      1.45    410.40      1.00
+grass-standard_proj_params[6]     -0.04      1.01     -0.04     -1.69      1.53    421.19      1.00
+grass-standard_proj_params[7]      0.81      0.76      0.79     -0.49      1.92    475.38      1.00
+grass-standard_proj_params[8]     -0.02      0.96      0.00     -1.37      1.80    353.09      1.00
+grass-standard_proj_params[9]      0.15      0.79      0.16     -1.03      1.48    427.16      1.00
+            reg-kernel_length      0.47      0.07      0.47      0.36      0.60    352.22      1.00
+             reg-kernel_noise      0.12      0.02      0.12      0.10      0.15    418.47      1.00
+               reg-kernel_var      2.25      1.42      1.86      0.73      4.22    211.08      1.00
+
+Number of divergences: 1

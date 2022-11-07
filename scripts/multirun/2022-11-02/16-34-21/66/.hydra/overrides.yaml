@@ -1,0 +1,5 @@
+- train.n_subsample_gap=2
+- dataset_path=/home/yanni/projects/grassgp/scripts/outputs/2022-11-02/16-27-53/
+- inner_model.grass_config.reorthonormalize=True
+- inner_model.grass_config.Omega=[[1.0,0.0],[0.0,1.0]]
+- inner_model.grass_config.proj_locs=null

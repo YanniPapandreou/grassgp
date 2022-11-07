@@ -1,0 +1,27 @@
+
+                                   mean       std    median      5.0%     95.0%     n_eff     r_hat
+          grass-L_factor[0,0]      1.00      0.00      1.00      1.00      1.00       nan       nan
+          grass-L_factor[0,1]     -0.01      0.57     -0.06     -0.89      0.85    154.60      1.00
+          grass-L_factor[1,0]     -0.01      0.57     -0.06     -0.89      0.85    154.60      1.00
+          grass-L_factor[1,1]      1.00      0.00      1.00      1.00      1.00    374.21      1.00
+          grass-kernel_length      2.33      2.32      1.70      0.46      3.94    138.45      1.00
+             grass-kernel_var     11.89     88.58      0.87      0.00     16.99    391.25      1.01
+           grass-proj_mean[0]      0.07      1.01      0.02     -1.52      1.76    383.99      1.00
+           grass-proj_mean[1]      0.00      0.71     -0.10     -1.15      1.22    216.10      1.00
+              grass-sigmas[0]      1.46      1.46      1.03      0.09      3.36    439.10      1.00
+              grass-sigmas[1]      1.47      1.50      0.98      0.05      3.22    313.73      1.00
+grass-standard_proj_params[0]     -0.08      1.01     -0.08     -1.78      1.29    197.67      1.00
+grass-standard_proj_params[1]     -0.64      0.84     -0.60     -2.04      0.58    304.91      1.00
+grass-standard_proj_params[2]     -0.02      0.96     -0.01     -1.40      1.69    234.36      1.00
+grass-standard_proj_params[3]      0.68      0.66      0.67     -0.41      1.71    196.56      1.01
+grass-standard_proj_params[4]     -0.09      1.04     -0.11     -1.93      1.54    185.55      1.00
+grass-standard_proj_params[5]      0.09      0.78      0.10     -1.03      1.64    191.90      1.00
+grass-standard_proj_params[6]     -0.02      1.04     -0.01     -1.79      1.46    256.93      1.00
+grass-standard_proj_params[7]      0.88      0.79      0.91     -0.54      1.95    366.03      1.00
+grass-standard_proj_params[8]     -0.03      0.98     -0.09     -1.68      1.49    247.72      1.01
+grass-standard_proj_params[9]      0.36      0.85      0.37     -0.89      1.76    198.85      1.01
+            reg-kernel_length      0.48      0.08      0.48      0.36      0.60    219.03      1.00
+             reg-kernel_noise      0.12      0.02      0.12      0.10      0.15    321.10      1.01
+               reg-kernel_var      2.26      1.65      1.93      0.73      3.63    200.86      1.00
+
+Number of divergences: 0
