@@ -100,7 +100,7 @@ def run_svi_for_map(rng_key, model, maxiter, step_size, *args):
 # %%
 ########################################
 ### Choose default dataset here ########
-base_path = Path(os.getcwd()) / "multirun" / "2022-10-25" / "22-58-44"
+base_path = Path(os.getcwd()) / "multirun" / "2022-11-02" / "16-10-34"
 key_path = "0"
 path = base_path / key_path
 ########################################

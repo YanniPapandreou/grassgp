@@ -28,7 +28,7 @@ import jax.numpy as np
 # %%
 dataset_paths = [f"{str(Config.dataset_path)[:-1]}{i}" for i in range(8)]
 
-dataset_paths.append('/home/yanni/projects/grassgp/scripts/outputs/2022-10-25/23-07-38/')
+dataset_paths.append('/home/yanni/projects/grassgp/scripts/outputs/2022-11-02/16-27-53/')
 
 dataset_paths_override = ""
 for i, path in enumerate(dataset_paths):
