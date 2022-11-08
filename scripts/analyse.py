@@ -32,8 +32,8 @@ from grassgp.grassmann import compute_karcher_mean
 
 from train import sub_grid_inds
 
-import matplotlib.pyplot as ax
-ax.rcParams["figure.figsize"] = (10,6)
+import matplotlib.pyplot as plt
+plt.rcParams["figure.figsize"] = (10,6)
 
 
 # %%
@@ -88,7 +88,13 @@ X_fine = np.array(data['X'])
 s_fine = np.array(data['s'])
 Ps_fine = np.array(data['Ps'])
 Ys_fine = np.array(data['Ys'])
-anchor_point = np.array(data['anchor_point'])
+
+try:
+    anchor_point = np.array(data['anchor_point'])
+except KeyError:
+    dataset_config = load_from_yaml(dataset_config_path)
+    anchor_point = np.array(dataset_config.inner_model.grass_config.anchor_point)
+
 X_fine_projs = np.einsum('ij,ljk->lik', X_fine, Ps_fine)
 
 X = np.array(training_data['X'])
