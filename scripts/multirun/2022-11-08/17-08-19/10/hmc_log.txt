@@ -1,0 +1,22 @@
+
+                                   mean       std    median      5.0%     95.0%     n_eff     r_hat
+          grass-L_factor[0,0]      1.00      0.00      1.00      1.00      1.00       nan       nan
+          grass-L_factor[0,1]      0.03      0.55      0.04     -0.74      1.00    256.52      1.01
+          grass-L_factor[1,0]      0.03      0.55      0.04     -0.74      1.00    256.52      1.01
+          grass-L_factor[1,1]      1.00      0.00      1.00      1.00      1.00    181.81      1.00
+           grass-proj_mean[0]      0.04      0.98      0.06     -1.68      1.56    463.51      1.00
+           grass-proj_mean[1]     -0.14      0.69     -0.16     -1.37      0.82    427.38      1.00
+              grass-sigmas[0]      1.80      3.03      1.03      0.06      3.66    521.53      1.00
+              grass-sigmas[1]      4.22      1.78      3.76      1.95      7.04    278.00      1.00
+grass-standard_proj_params[0]      0.00      0.79     -0.03     -1.25      1.32    441.04      1.00
+grass-standard_proj_params[1]      0.01      0.70      0.00     -0.98      1.23    397.53      1.00
+grass-standard_proj_params[2]      0.08      1.11      0.13     -1.97      1.59    113.59      1.00
+grass-standard_proj_params[3]      1.00      0.76      0.97     -0.11      2.26    388.43      1.00
+grass-standard_proj_params[4]      0.04      0.93      0.07     -1.29      1.69    520.83      1.00
+grass-standard_proj_params[5]      0.11      0.62      0.15     -0.97      1.05    420.23      1.00
+grass-standard_proj_params[6]      0.05      1.10      0.00     -1.66      1.93    374.52      1.00
+grass-standard_proj_params[7]     -1.01      0.79     -1.06     -2.33      0.21    418.65      1.01
+grass-standard_proj_params[8]     -0.10      1.07     -0.06     -1.86      1.56    313.91      1.01
+grass-standard_proj_params[9]     -1.26      0.81     -1.27     -2.61      0.01    342.00      1.00
+
+Number of divergences: 4
