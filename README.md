@@ -1,4 +1,4 @@
-# projection_pursuit
+# grassgp
 Code for dimension-reduction project.
 
 # Installation
@@ -7,7 +7,7 @@ Code for dimension-reduction project.
 Steps:
 
 1. Clone the repo
-2. `cd` into the repo (`cd projection_pursuit`)
+2. `cd` into the repo (`cd grassgp`)
 3. Create a virtual environment
 4. Install [`poetry`](https://python-poetry.org/) -- suggested method:
     1. Install [`pipx`](https://pypa.github.io/pipx/)
