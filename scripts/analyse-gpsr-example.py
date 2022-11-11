@@ -46,8 +46,8 @@ def print_file(x: Path):
 # Job Parameters
 base_path = Path(os.getcwd())
 output_folder = "multirun"
-date = "2022-11-08"
-time = "17-08-19"
+date = "2022-11-10"
+time = "13-31-42"
 id_num = "0"
 
 # %%
