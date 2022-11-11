@@ -18,3 +18,15 @@ scripts/configs/.ipynb_checkpoints/
 scripts/untitled.py
 
 src/grassgp/configs/.ipynb_checkpoints/
+
+scripts/analysis_mean_zero_gp-params-fixed-mismatch-subsampled.py
+
+scripts/analysis_results/*
+
+scripts/papermill_reports/*
+
+tests/.ipynb_checkpoints/
+
+scripts/analysis_results_gpsr_example/.ipynb_checkpoints/
+
+scripts/analysis_results_gpsr_example/random_sampling/.ipynb_checkpoints/
