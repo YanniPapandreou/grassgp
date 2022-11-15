@@ -30,3 +30,7 @@ tests/.ipynb_checkpoints/
 scripts/analysis_results_gpsr_example/.ipynb_checkpoints/
 
 scripts/analysis_results_gpsr_example/random_sampling/.ipynb_checkpoints/
+
+scripts/_dev/.ipynb_checkpoints/hardcoded-active-subspace-checkpoint.ipynb
+scripts/_dev/.ipynb_checkpoints/hardcoded-active-subspace-checkpoint.py
+scripts/_dev/hardcoded-active-subspace.ipynb
