@@ -5,7 +5,7 @@ import jax.numpy.linalg as lin
 import numpyro
 import numpyro.distributions as dist
 
-from grassgp.utils import unvec
+from grassgp.utils import unvec, vec
 from grassgp.kernels import rbf
 from grassgp.grassmann import convert_to_projs
 
@@ -307,7 +307,8 @@ def grassmann_process(s, grass_config: dict = {'anchor_point': [[1.0], [0.0]], '
         # proj_mean = numpyro.sample("proj_mean", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)))
         # proj_locs = np.tile(proj_mean, n_s)
         # new way using different means
-        proj_locs = numpyro.sample("proj_locs", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)).expand([n_s]))
+        proj_mean = numpyro.sample("proj_mean", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)).expand([n_s]))
+        proj_locs = numpyro.deterministic("proj_locs", vec(proj_mean))
     else:
         proj_locs = np.array(grass_config['proj_locs'])
         
