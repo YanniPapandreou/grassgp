@@ -303,8 +303,11 @@ def grassmann_process(s, grass_config: dict = {'anchor_point': [[1.0], [0.0]], '
     
     if grass_config['proj_locs'] is None:
         # sample proj_locs
-        proj_mean = numpyro.sample("proj_mean", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)))
-        proj_locs = np.tile(proj_mean, n_s)
+        # ! old way where mean is same for each time
+        # proj_mean = numpyro.sample("proj_mean", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)))
+        # proj_locs = np.tile(proj_mean, n_s)
+        # new way using different means
+        proj_locs = numpyro.sample("proj_locs", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)).expand([n_s]))
     else:
         proj_locs = np.array(grass_config['proj_locs'])
         
