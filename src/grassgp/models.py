@@ -308,7 +308,7 @@ def grassmann_process(s, grass_config: dict = {'anchor_point': [[1.0], [0.0]], '
         # proj_locs = np.tile(proj_mean, n_s)
         # new way using different means
         proj_mean = numpyro.sample("proj_mean", dist.MultivariateNormal(scale_tril=np.eye(proj_dim)).expand([n_s]))
-        proj_locs = numpyro.deterministic("proj_locs", vec(proj_mean))
+        proj_locs = numpyro.deterministic("proj_locs", vec(proj_mean.T))
     else:
         proj_locs = np.array(grass_config['proj_locs'])
         
