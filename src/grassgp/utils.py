@@ -1,11 +1,15 @@
 import os
 import pathlib
+import uuid
 import jax.numpy as np
 from jax import jit
 import jax.numpy.linalg as lin
 from functools import partial
+import chex
 
-from hydra_zen import load_from_yaml
+import omegaconf
+from hydra_zen import load_from_yaml, save_as_yaml
+
 
 @jit
 def vec(X):
@@ -220,3 +224,19 @@ def get_config_and_data(path):
     overrides = load_from_yaml(path / ".hydra" / "overrides.yaml")
     data = load_and_convert_to_samples_dict(str(path / "dataset.npz"))
     return {'config': config, 'overrides': overrides, 'data': data}
+
+
+def to_dictconf(cfg):
+    assert not isinstance(cfg, omegaconf.dictconfig.DictConfig), f"cfg is already of type {type(cfg)}"
+    filename = str(uuid.uuid4()) + '.yaml'
+    if os.path.exists(filename):
+        raise FileExistsError
+    else:
+        save_as_yaml(cfg, filename)
+        dict_cfg = load_from_yaml(filename)
+        os.remove(filename)
+        return dict_cfg
+
+
+def rank(x: chex.ArrayDevice) -> int:
+    return len(x.shape)

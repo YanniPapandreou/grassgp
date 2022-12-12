@@ -215,7 +215,7 @@ def convert_to_projs(Deltas, anchor_point, reorthonormalize: bool = True):
     return vmap(lambda delta: grass_exp(anchor_point, delta, reorthonormalize=reorthonormalize))(Deltas)
 
 
-def compute_karcher_mean(Ps_samples):
+def compute_karcher_means(Ps_samples):
     """function to compute the karcher mean/barycenter of sampled projections
 
     Parameters
@@ -244,3 +244,14 @@ def compute_karcher_mean(Ps_samples):
         Ps_mean = Ps_mean.at[i,:,:].set(points_mean)
 
     return Ps_mean
+
+
+def compute_barycenter(Ws):
+    N, d, n = Ws.shape
+    G = Grassmann(d, n)
+    points = []
+    for i in range(N):
+        proj = Ws[i]
+        assert valid_grass_point(proj)
+        points.append(proj)
+    return compute_centroid(G, points)

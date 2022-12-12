@@ -1,5 +1,9 @@
 import jax.numpy as np
 from jax import vmap
+
+from typing import Dict, List
+import chex
+
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -47,32 +51,61 @@ def plot_projected_data(X_projs, s, Ys, base_fig_size: tuple = (10, 6), cols:int
     plt.show()
 
 
-def flatten_samples(samples: dict, ignore: list = ['L_factor', 'sigmas', 'Omega', 'mat']):
+# def flatten_samples(samples: dict, ignore: list = ['L_factor', 'sigmas', 'Omega', 'mat']):
+#     flattened_samples = {}
+#     for key, value in samples.items():
+#         if any([name in key for name in ignore]):
+#             continue
+        
+#         key_shape = value.shape
+#         if len(key_shape) == 1:
+#             flattened_samples[f'{key}'] = value
+#         elif len(key_shape) == 2:
+#             for i in range(key_shape[1]):
+#                 flattened_samples[f'{key}[{i}]'] = value[:, i]
+#         elif len(key_shape) == 3:
+#             for i in range(key_shape[1]):
+#                 for j in range(key_shape[2]):
+#                     flattened_samples[f'{key}[{i},{j}]'] = value[:, i, j]
+#         elif len(key_shape) == 4:
+#             for i in range(key_shape[1]):
+#                 for j in range(key_shape[2]):
+#                     for k in range(key_shape[3]):
+#                         flattened_samples[f'{key}[{i},{j},{k}]'] = value[:, i, j, k]
+#         else:
+#             raise ValueError(f'samples[{key}] contains values of dim > 3')
+        
+#     my_samples = pd.DataFrame(flattened_samples)
+#     return my_samples
+
+def flatten_samples(samples: Dict[str, chex.ArrayDevice], ignore: List[str]):
     flattened_samples = {}
     for key, value in samples.items():
         if any([name in key for name in ignore]):
             continue
         
-        key_shape = value.shape
-        if len(key_shape) == 1:
+        value_shape = value.shape
+        value_rank = len(value_shape)
+        if value_rank == 1:
             flattened_samples[f'{key}'] = value
-        elif len(key_shape) == 2:
-            for i in range(key_shape[1]):
+        elif value_rank == 2:
+            for i in range(value_shape[1]):
                 flattened_samples[f'{key}[{i}]'] = value[:, i]
-        elif len(key_shape) == 3:
-            for i in range(key_shape[1]):
-                for j in range(key_shape[2]):
+        elif value_rank == 3:
+            for i in range(value_shape[1]):
+                for j in range(value_shape[2]):
                     flattened_samples[f'{key}[{i},{j}]'] = value[:, i, j]
-        elif len(key_shape) == 4:
-            for i in range(key_shape[1]):
-                for j in range(key_shape[2]):
-                    for k in range(key_shape[3]):
+        elif value_rank == 4:
+            for i in range(value_shape[1]):
+                for j in range(value_shape[2]):
+                    for k in range(value_shape[3]):
                         flattened_samples[f'{key}[{i},{j},{k}]'] = value[:, i, j, k]
         else:
-            raise ValueError(f'samples[{key}] contains values of dim > 3')
+            raise ValueError(f'samples[{key}] contains tensors of rank > 4')
         
     my_samples = pd.DataFrame(flattened_samples)
     return my_samples
+
 
 def pairplots(my_samples):
     fig_pair = sns.pairplot(my_samples, diag_kind='hist', corner='True')
@@ -269,10 +302,44 @@ def plot_preds_train_locs(means, predictions, X, X_test, s, Ys, Ps, percentile_l
 #             ax.set_title(f'{quantity} at spatial point: s = ({s[i,0]:.2f}, {s[i,1]:.2f})')
 
 #         plt.show()
-def plot_grass_dists(Ps_samples, Ps, s, base_fig_size=(8, 6), a=1.0, quantity = 'Grass dists', cols:int = 2, ex=0.75, fontsize=15, axisfontsize=15):
-    assert Ps_samples.shape[1:] == Ps.shape
+# def plot_grass_dists(Ps_samples, Ps, s, base_fig_size=(8, 6), a=1.0, quantity = 'Grass dists', cols:int = 2, ex=0.75, fontsize=15, axisfontsize=15):
+#     assert Ps_samples.shape[1:] == Ps.shape
+#     # create function to compute grass_dist at specific time for each sample
+#     compute_dists_at_single_time = lambda i: vmap(lambda proj: grass_dist(Ps[i,:,:], proj[i,:,:]))(Ps_samples)
+
+#     # use vmap to run this for all times
+#     dists = vmap(compute_dists_at_single_time)(np.arange(s.shape[0]))
+
+#     # plot dists
+#     tot = s.shape[0]
+#     rows = tot // cols
+#     if tot % cols != 0:
+#         rows += 1
+    
+#     w, h = base_fig_size
+#     fig_size = (w * cols + ex*w*(cols-1), h * rows + ex*h*(rows-1))
+#     fig, axs = plt.subplots(rows, cols, sharex=True, sharey=True, figsize=fig_size, constrained_layout=True)
+#     axs = axs.reshape(rows,cols)
+#     for i in range(tot):
+#         # plot dists
+#         id_x, id_y = i // cols, i % cols
+        
+#         axs[id_x, id_y].plot(dists[i,:], alpha=a)
+        
+#         if len(s.shape) == 1:
+#             axs[id_x, id_y].set_title(f'{quantity} at time: t = {s[i]:.2f}', fontdict={'fontsize': fontsize})
+#         else:
+#             axs[id_x, id_y].set_title(f'{quantity} at spatial point: s = ({s[i,0]:.2f}, {s[i,1]:.2f})', fontdict={'fontsize': fontsize})
+        
+#         axs[id_x,id_y].tick_params(axis='x', labelsize=axisfontsize)
+#         axs[id_x,id_y].tick_params(axis='y', labelsize=axisfontsize)
+
+#     plt.show()
+
+def plot_grass_dists(Ws_samples, Ws, s, base_fig_size=(8, 6), a=1.0, quantity = 'Grass dists', cols:int = 2, ex=0.75, fontsize=15, axisfontsize=15):
+    assert Ws_samples.shape[1:] == Ws.shape
     # create function to compute grass_dist at specific time for each sample
-    compute_dists_at_single_time = lambda i: vmap(lambda proj: grass_dist(Ps[i,:,:], proj[i,:,:]))(Ps_samples)
+    compute_dists_at_single_time = lambda i: vmap(lambda proj: grass_dist(Ws[i], proj[i]))(Ws_samples)
 
     # use vmap to run this for all times
     dists = vmap(compute_dists_at_single_time)(np.arange(s.shape[0]))

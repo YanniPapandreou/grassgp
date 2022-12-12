@@ -1,8 +1,9 @@
+from functools import partial
 import jax.numpy as np
+from jax import jit
 
-def zero_mean(x):
-  return 0.0
+import chex
 
-def reg_test_mean(x):
-    y = x + 0.2 * (x ** 3) + 0.5 * ((0.5 + x) ** 2) * np.sin(4.0 * x)
-    return y
+@partial(jit, static_argnums=(1, 2))
+def zero_mean(s: chex.ArrayDevice, d: int, n: int) -> chex.ArrayDevice:
+    return np.zeros((d, n))
