@@ -16,7 +16,6 @@ grass_model_config_full_reortho_b_1 = {
     'b' : 1.0
 }
 
-
 grass_model_config_full_reortho_b_5 = {
     'anchor_point': [[1.0], [0.0]],
     'Omega' : None, 
@@ -31,7 +30,6 @@ grass_model_config_full_reortho_b_5 = {
     'reorthonormalize' : True,
     'b' : 5.0
 }
-
 
 GrassConfFullReortho_b_1 = builds(grassmann_process, grass_config = grass_model_config_full_reortho_b_1, zen_partial=True)
 GrassConfFullReortho_b_5 = builds(grassmann_process, grass_config = grass_model_config_full_reortho_b_5, zen_partial=True)

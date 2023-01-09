@@ -1,0 +1,29 @@
+model:
+  _target_: __main__.model
+  _partial_: true
+  grass_config:
+    anchor_point:
+    - - 0.8910065228439439
+    - - -0.45399050237812694
+    Omega: null
+    proj_locs: null
+    var: null
+    length: null
+    noise: null
+    require_noise: false
+    jitter: 1.0e-06
+    proj_jitter: 0.0001
+    L_jitter: 1.0e-08
+    reorthonormalize: true
+    b: 1.0
+    ell: 0.002
+train:
+  seed: 9870687
+  n_warmup: 1000
+  n_samples: 1000
+  n_chains: 1
+  n_thinning: 2
+  init_strategy:
+    _target_: numpyro.infer.initialization.init_to_median
+    _partial_: true
+    num_samples: 10
