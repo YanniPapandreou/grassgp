@@ -54,3 +54,9 @@ _research/notes/.ipynb_checkpoints/
 poetry.lock.bak
 
 pyproject.toml.bak
+
+_research/outputs/
+
+_savvas_code/
+
+scripts/_dev/

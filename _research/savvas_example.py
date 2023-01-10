@@ -22,6 +22,7 @@ import sys
 # %%
 import jax.numpy as np
 from jax import random, vmap, grad
+from jax.experimental import sparse
 from scipy.stats import special_ortho_group
 from numpy.random import seed as set_numpy_seed
 
@@ -29,7 +30,7 @@ import chex
 from typing import Tuple
 
 # %%
-from grassgp.utils import get_save_path, to_dictconf
+from grassgp.utils import get_save_path, to_dictconf, vec
 # from grassgp.utils import load_and_convert_to_samples_dict as load_data
 from grassgp.grassmann import valid_grass_point, convert_to_projs, grass_log, grass_exp, compute_barycenter
 from grassgp.kernels import rbf
@@ -47,6 +48,10 @@ from grassgp.inference import run_inference
 
 # %%
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+import matplotlib.colorbar as colorbar
+import seaborn as sns
 plt.rcParams["figure.figsize"] = (10,6)
 
 
@@ -64,8 +69,8 @@ def run_svi_for_map(rng_key, model, maxiter, step_size, *args):
 # generate training spatial points
 xlims = (-10, 10)
 ylims = (-10,-4)
-# n_train = 114
-n_train_tmp = 50
+n_train_tmp = 114
+# n_train_tmp = 50
 ys = [y for y in range(ylims[0],ylims[1],1)]
 s_train = []
 for y in ys:
@@ -78,8 +83,8 @@ n_train = s_train.shape[0]
 
 # %% tags=[]
 # generate test spatial points
-# n_test = 86
-n_test = 30
+n_test = 86
+# n_test = 30
 key_s_test = random.PRNGKey(235326)
 key_x_test, key_y_test = random.split(key_s_test, 2)
 x_test = random.uniform(key_x_test, shape = (n_test,1), minval=xlims[0], maxval=xlims[1])
@@ -95,7 +100,7 @@ plt.show()
 # %%
 # generate random rotation matrix in R^d
 # d = 10
-d = 3
+d = 5
 set_numpy_seed(26436)
 R = np.array(special_ortho_group.rvs(d))
 
@@ -165,10 +170,25 @@ log_Ws_train = vmap(lambda W: grass_log(anchor_point, W))(Ws_train)
 log_Ws_test = vmap(lambda W: grass_log(anchor_point, W))(Ws_test)
 
 # %%
+Omega = np.cov(vmap(vec)(Ws_train), rowvar=False)
+assert Omega.shape == (d,d)
+# K_tmp = rbf(s_train, s_train, {'var': 1.0, 'length': 1.0, 'noise': 0.0})
+# Cov = np.kron(K_tmp, Omega)
+# sns.heatmap(Cov,cbar=True,
+#               annot=False,
+#               xticklabels=False,
+#               yticklabels=False,
+#               cmap=cm.viridis)
+# plt.show()
+# sparse_tol = 1e-4
+# (np.abs(Cov) < sparse_tol).sum() / (Cov.shape[0] * Cov.shape[1])
+
+# %%
 model_config = {
     'anchor_point': anchor_point.tolist(),
     'd_in': 2,
     'Omega' : None,
+    # 'Omega' : Omega.tolist(),
     'k_include_noise': True,
     'var' : 1.0,
     'length' : None, 
@@ -180,7 +200,8 @@ model_config = {
     'reorthonormalize' : False,
     'b' : 0.5,
     # 'ell': 0.0075
-    'ell': 0.01
+    'ell': 0.01,
+    'use_kron_chol': False
 }
 def model(s, log_Ws, grass_config = model_config):
     U = np.array(grass_config['anchor_point'])
@@ -233,7 +254,7 @@ def model(s, log_Ws, grass_config = model_config):
     grass_gp = GrassGP(d_in=grass_config['d_in'], d_out=(d,n), mu=mu, k=k, Omega=Omega, U=U, cov_jitter=grass_config['cov_jitter'])
 
     # sample Deltas
-    Deltas = grass_gp.tangent_model(s)
+    Deltas = grass_gp.tangent_model(s, use_kron_chol=grass_config['use_kron_chol'])
 
     # # # # # ! check what power this should be
     # likelihood

@@ -11,7 +11,7 @@ import numpyro
 import numpyro.distributions as dist
 import numpyro.handlers as handlers
 
-from grassgp.utils import unvec, vec, kron_solve
+from grassgp.utils import unvec, vec, kron_solve, kron_chol
 from grassgp.kernels import rbf
 from grassgp.grassmann import convert_to_projs, valid_grass_tangent, valid_grass_point
 
@@ -417,7 +417,7 @@ class MatGP:
     mu: Callable = field(repr=False)
     k: Callable = field(repr=False)
     Omega: chex.ArrayDevice = field(repr=False)
-    cov_jitter: float = field(default=1e-4, repr=False)
+    cov_jitter: float = field(default=1e-8, repr=False)
 
     
     def __post_init__(self):
@@ -427,7 +427,7 @@ class MatGP:
                     custom_message=f"Omega has shape {self.Omega.shape}; expected shape {(d_n, d_n)}")
 
 
-    def model(self, s: chex.ArrayDevice) -> chex.ArrayDevice:
+    def model(self, s: chex.ArrayDevice, use_kron_chol: bool = True) -> chex.ArrayDevice:
         d, n = self.d_out
         d_n = d * n
         assert_rank(s, self.d_in)
@@ -442,8 +442,13 @@ class MatGP:
         assert_shape(K, (N, N))
 
         # compute covariance matrix and cholesky factor
-        Cov = np.kron(K, self.Omega) + self.cov_jitter * np.eye(N*d_n)
-        Chol = lin.cholesky(Cov)
+        if use_kron_chol:
+            Chol = kron_chol(K + self.cov_jitter * np.eye(N), self.Omega)
+        else:
+            Cov = np.kron(K + self.cov_jitter * np.eye(N), self.Omega)
+            Chol = lin.cholesky(Cov)
+
+        # TODO check this works
 
         # sample vec_Vs
         Z = numpyro.sample("Z", dist.MultivariateNormal(covariance_matrix=np.eye(N*d_n)))
@@ -579,10 +584,10 @@ class GrassGP:
         return mat_gp
 
 
-    def tangent_model(self, s: chex.ArrayDevice) -> chex.ArrayDevice:
+    def tangent_model(self, s: chex.ArrayDevice, use_kron_chol: bool = True) -> chex.ArrayDevice:
         d, n = self.d_out
         N = s.shape[0]
-        Vs = self.V.model(s)
+        Vs = self.V.model(s, use_kron_chol=use_kron_chol)
         I_UUT = np.eye(d) - self.U @ self.U.T
         Deltas = numpyro.deterministic("Deltas", np.einsum('ij,ljk->lik', I_UUT, Vs))
         assert_shape(Deltas, (N, d, n),
