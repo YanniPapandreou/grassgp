@@ -6,6 +6,7 @@ from grassgp.utils import multiprod, multitransp
 from pymanopt.manifolds.grassmann import Grassmann
 from pymanopt.optimizers.nelder_mead import compute_centroid
 
+
 @partial(jit, static_argnums=1)
 def valid_grass_point(X, tol=1.0e-6):
     """Checks if X is a valid point in the Grassmann manifold
@@ -96,7 +97,8 @@ def grass_dist(X, Y):
     float
         dist(X,Y)
     """
-    u, s, v = lin.svd(multiprod(multitransp(X), Y))
+    # u, s, v = lin.svd(multiprod(multitransp(X), Y))
+    s = lin.svd(multiprod(multitransp(X), Y), compute_uv=False)
     return lin.norm(np.arccos(np.where(s > 1, 1, s)))
 
 @partial(jit, static_argnums=(1,2))
