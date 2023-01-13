@@ -36,7 +36,7 @@ from grassgp.grassmann import valid_grass_point, convert_to_projs, grass_log, gr
 from grassgp.kernels import rbf
 from grassgp.models import GrassGP
 from grassgp.means import zero_mean
-from grassgp.plot_utils import flatten_samples, plot_grass_dists
+from grassgp.plot_utils import flatten_samples, plot_grass_dists, mat_heatmap
 
 # %%
 import numpyro
@@ -99,8 +99,8 @@ plt.show()
 
 # %%
 # generate random rotation matrix in R^d
-# d = 10
-d = 5
+d = 10
+# d = 5
 set_numpy_seed(26436)
 R = np.array(special_ortho_group.rvs(d))
 
@@ -172,6 +172,7 @@ log_Ws_test = vmap(lambda W: grass_log(anchor_point, W))(Ws_test)
 # %%
 Omega = np.cov(vmap(vec)(Ws_train), rowvar=False)
 assert Omega.shape == (d,d)
+# mat_heatmap(Omega)
 # K_tmp = rbf(s_train, s_train, {'var': 1.0, 'length': 1.0, 'noise': 0.0})
 # Cov = np.kron(K_tmp, Omega)
 # sns.heatmap(Cov,cbar=True,
@@ -198,9 +199,10 @@ model_config = {
     'cov_jitter' : 1e-4,
     'L_jitter' : 1e-8,
     'reorthonormalize' : False,
-    'b' : 0.5,
+    # 'b' : 0.5, # mine
+    'b' : 0.001, # savvas
     # 'ell': 0.0075
-    'ell': 0.01,
+    # 'ell': 0.01, # mine
     'use_kron_chol': False
 }
 def model(s, log_Ws, grass_config = model_config):
@@ -230,7 +232,10 @@ def model(s, log_Ws, grass_config = model_config):
 
     if grass_config['length'] is None:
         # sample length
-        length = numpyro.sample("kernel_length", dist.LogNormal(0.0, grass_config['b']))
+        # # ! my parametrisation
+        # length = numpyro.sample("kernel_length", dist.LogNormal(0.0, grass_config['b']))
+        # # ! savvas parametrisation
+        length = numpyro.sample("kernel_length", dist.LogNormal(-0.7, grass_config['b']))
     else:
         length = grass_config['length']
 
@@ -244,7 +249,8 @@ def model(s, log_Ws, grass_config = model_config):
         noise = 0.0
     
 
-    kernel_params = {'var': var, 'length': length, 'noise': noise}
+    # kernel_params = {'var': var, 'length': length, 'noise': noise} # mine
+    kernel_params = {'var': var, 'length': np.sqrt(1/length), 'noise': noise} # savvas
     # create kernel function
     k = lambda t, s: rbf(t, s, kernel_params, jitter=grass_config['jitter'], include_noise=grass_config['k_include_noise'])
     # create mean function
@@ -258,7 +264,8 @@ def model(s, log_Ws, grass_config = model_config):
 
     # # # # # ! check what power this should be
     # likelihood
-    ell = grass_config['ell']
+    # ell = grass_config['ell'] # mine
+    ell = numpyro.sample("ell", dist.LogNormal(-6, 0.0015))
     with numpyro.plate("N", N):
         numpyro.sample("log_W", dist.continuous.MatrixNormal(loc=Deltas, scale_tril_row=ell * np.eye(d), scale_tril_column=np.eye(n)), obs=log_Ws)
 
@@ -273,8 +280,8 @@ SVIConfig = make_config(
 
 TrainConfig = make_config(
     seed = 9870687,
-    n_warmup = 1000,
-    n_samples = 1000,
+    n_warmup = 2000,
+    n_samples = 10000,
     n_chains = 1,
     n_thinning = 2
 )
