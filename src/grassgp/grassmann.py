@@ -26,6 +26,7 @@ def valid_grass_point(X, tol=1.0e-6):
     D, n = X.shape
     return lin.norm(X.T @ X - np.eye(n)) / np.sqrt(n) < tol
 
+
 @partial(jit, static_argnums=2)
 def valid_grass_tangent(X, Delta, tol=1.0e-6):
     """Checks if Delta is a valid tangent vector at X in the Grasmmann manifold
@@ -81,6 +82,7 @@ def grass_exp(X, Delta, reorthonormalize: bool = True):
 
     return Y
 
+
 @jit
 def grass_dist(X, Y):
     """Computes the Riemannian distance between points X and Y in the Grassmann Manifold
@@ -100,6 +102,7 @@ def grass_dist(X, Y):
     # u, s, v = lin.svd(multiprod(multitransp(X), Y))
     s = lin.svd(multiprod(multitransp(X), Y), compute_uv=False)
     return lin.norm(np.arccos(np.where(s > 1, 1, s)))
+
 
 @partial(jit, static_argnums=(1,2))
 def rand_grass_point(key, D, n):
@@ -123,6 +126,7 @@ def rand_grass_point(key, D, n):
     q, unused = lin.qr(X)
     return q
 
+
 @jit
 def grass_proj(X, U):
     """Projects U into the Grassmann tangent space at X
@@ -143,6 +147,7 @@ def grass_proj(X, U):
     d = X.shape[0]
     projector = (np.eye(d) - X @ X.T)
     return projector @ U
+
 
 @jit
 def rand_grass_tangent(key, X):
@@ -166,6 +171,7 @@ def rand_grass_tangent(key, X):
     U = U / lin.norm(U)
     return U
 
+
 @jit
 def grass_log(X, Y):
     """function to compute the Grassmann logarithm
@@ -185,7 +191,7 @@ def grass_log(X, Y):
     ytx = multiprod(multitransp(Y), X)
     psi, s, rt =lin.svd(ytx, full_matrices=False)
     Y_star = multiprod(Y, multiprod(psi, rt))
-    L = Y_star - multiprod(X,multiprod(multitransp(X),Y_star))
+    L = Y_star - multiprod(X,multiprod(multitransp(X), Y_star))
     q, sigma, vt = lin.svd(L, full_matrices=False)
     arcsin_sigma = np.diag(np.arcsin(sigma))
     delta = multiprod(q, multiprod(arcsin_sigma, vt))
