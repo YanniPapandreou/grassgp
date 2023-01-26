@@ -143,7 +143,7 @@ class GrassGP:
     def tangent_model(self, s: chex.ArrayDevice, use_kron_chol: bool = True) -> chex.ArrayDevice:
         d, n = self.d_out
         N = s.shape[0]
-        Vs = self.V.model(s, use_kron_chol=use_kron_chol)
+        Vs = self.V.model(s)
         I_UUT = np.eye(d) - self.U @ self.U.T
         Deltas = numpyro.deterministic("Deltas", np.einsum('ij,ljk->lik', I_UUT, Vs))
         assert_shape(Deltas, (N, d, n),
