@@ -140,7 +140,7 @@ class GrassGP:
         mat_gp = MatGP(d_in=self.d_in, d_out=self.d_out, mu=self.mu, k=self.k, Omega_diag_chol=self.Omega_diag_chol, cov_jitter=self.cov_jitter)
         return mat_gp
 
-    def tangent_model(self, s: chex.ArrayDevice, use_kron_chol: bool = True) -> chex.ArrayDevice:
+    def tangent_model(self, s: chex.ArrayDevice) -> chex.ArrayDevice:
         d, n = self.d_out
         N = s.shape[0]
         Vs = self.V.model(s)
