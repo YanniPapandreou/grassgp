@@ -1,5 +1,5 @@
 import jax.numpy as np
-from jax import jit, vmap, random
+from jax import jit, vmap, random, lax
 import jax.numpy.linalg as lin
 from functools import partial
 from grassgp.utils import multiprod, multitransp
@@ -263,3 +263,21 @@ def compute_barycenter(Ws):
         assert valid_grass_point(proj)
         points.append(proj)
     return compute_centroid(G, points)
+
+
+
+def sample_karcher_mean(points, steps:int = 100, seed:int = 42):
+    def gradient_step(mu_prev, time, Ws):
+        logs = vmap(lambda W: grass_log(mu_prev, W))(Ws)
+        delta_mu = logs.mean(axis=0)
+        mu_prev = grass_exp(mu_prev, delta_mu)
+        return mu_prev, mu_prev
+    
+    update_func = partial(gradient_step, Ws=points)
+    timesteps = np.arange(steps)
+    N = points.shape[0]
+    key = random.PRNGKey(seed)
+    mu_0 = points[random.choice(key, np.arange(N))]
+    final, result = lax.scan(update_func, init=mu_0, xs=timesteps)
+    return final, result, mu_0
+    
