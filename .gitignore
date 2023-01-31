@@ -60,3 +60,7 @@ _research/outputs/
 _savvas_code/
 
 scripts/_dev/
+
+examples/.ipynb_checkpoints/
+
+examples/savvas_example_optimised_analysis.ipynb
