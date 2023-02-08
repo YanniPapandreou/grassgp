@@ -147,7 +147,7 @@ def model(s, X, Ys):
     N = s.shape[0]
     d_n = d * n
     Omega_diag_chol = numpyro.sample('Omega_diag_chol', dist.LogNormal(0.0, 1.0).expand([d_n]))
-    grass_length = numpyro.sample("grass_length", dist.LogNormal(0.0, 10.0))
+    grass_length = numpyro.sample("grass_length", dist.LogNormal(0.0, 5.0))
     grass_kernel_params = {'var': 1.0, 'length': grass_length, 'noise': 0.0}
     k_grass = lambda t, s: rbf(t, s, grass_kernel_params, jitter=1e-06)
     mu_grass = lambda s: zero_mean(s, d, n)
@@ -158,9 +158,9 @@ def model(s, X, Ys):
     X_projs_all = np.vstack([X_projs[i,:,:] for i in range(N)])
     vec_Ys = vec(Ys)
     
-    outer_var = numpyro.sample("outer_var", dist.LogNormal(0.0, 10.0))
-    outer_length = numpyro.sample("outer_length", dist.LogNormal(0.0, 10.0))
-    outer_noise = numpyro.sample("outer_noise", dist.LogNormal(0.0, 10.0))
+    outer_var = numpyro.sample("outer_var", dist.LogNormal(0.0, 5.0))
+    outer_length = numpyro.sample("outer_length", dist.LogNormal(0.0, 5.0))
+    outer_noise = numpyro.sample("outer_noise", dist.LogNormal(0.0, 5.0))
     outer_kernel_params = {'var': outer_var, 'length': outer_length, 'noise': outer_noise}
     K_outer = rbf(X_projs_all, X_projs_all, outer_kernel_params, jitter=1e-06)
     
