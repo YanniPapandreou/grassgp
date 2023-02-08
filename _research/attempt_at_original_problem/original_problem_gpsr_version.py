@@ -19,24 +19,19 @@ import os
 # %%
 # import jax
 import time
-from hydra_zen import instantiate, make_config, builds 
 import sys
 
 # %%
 from itertools import product
 import jax.numpy as np
-from jax import random 
 from jax import random, vmap
 
-import chex
-from typing import Tuple
-
 # %%
-from grassgp.utils import get_save_path, subspace_angle, to_dictconf
+from grassgp.utils import get_save_path
 from grassgp.utils import vec
-# from grassgp.utils import safe_save_jax_array_dict as safe_save
+from grassgp.utils import safe_save_jax_array_dict as safe_save
 # from grassgp.utils import load_and_convert_to_samples_dict as load_data
-from grassgp.grassmann import valid_grass_point, convert_to_projs, grass_log, grass_exp, compute_barycenter
+from grassgp.grassmann import valid_grass_point, convert_to_projs
 from grassgp.kernels import rbf
 from grassgp.models_optimised import GrassGP
 from grassgp.means import zero_mean
