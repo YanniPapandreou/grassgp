@@ -39,6 +39,8 @@ class MatGP:
         # compute mean matrix M = [mu(s[1]), mu(s[2]), ..., mu(s[N])]
         M = np.hstack(vmap(self.mu)(s))
         assert_shape(M, (d, n*N))
+        # ! TODO: check this out
+        vec_M = vec(M)
 
         # compute kernel matrix
         K = self.k(s, s)
@@ -51,7 +53,8 @@ class MatGP:
         # Z = numpyro.sample("Z", dist.MultivariateNormal(covariance_matrix=np.eye(N*d_n)))
         Z = numpyro.sample("Z", dist.Normal().expand([N*d_n]))
         unvec_Z = unvec(Z, d_n, N)
-        vec_Vs = numpyro.deterministic("vec_Vs", vec(M + np.einsum('i,ij->ij', self.Omega_diag_chol, unvec_Z @ K_chol.T)))
+        # vec_Vs = numpyro.deterministic("vec_Vs", vec(M + np.einsum('i,ij->ij', self.Omega_diag_chol, unvec_Z @ K_chol.T)))
+        vec_Vs = numpyro.deterministic("vec_Vs", vec_M + vec(np.einsum('i,ij->ij', self.Omega_diag_chol, unvec_Z @ K_chol.T)))
 
         # form Vs
         Vs = numpyro.deterministic("Vs", vmap(lambda params: unvec(params, d, n))(np.array(vec_Vs.split(N))))
