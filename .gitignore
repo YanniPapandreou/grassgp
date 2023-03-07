@@ -64,3 +64,16 @@ scripts/_dev/
 examples/.ipynb_checkpoints/
 
 examples/savvas_example_optimised_analysis.ipynb
+paper/article.aux
+paper/article.fdb_latexmk
+paper/article.fls
+paper/article.log
+paper/article.out
+paper/article.synctex.gz
+paper/pdflatex50303.fls
+paper/supplement.aux
+paper/supplement.fdb_latexmk
+paper/supplement.fls
+paper/supplement.log
+paper/supplement.out
+paper/supplement.synctex.gz
