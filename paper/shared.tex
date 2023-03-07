@@ -2,6 +2,7 @@
 \graphicspath{{./images/}}
 \usepackage{amsmath,amsthm,amssymb}
 \usepackage[numbers]{natbib}
+\usepackage[svgnames]{xcolor}
 \usepackage{xr-hyper}
 \usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,anchorcolor=blue]{hyperref}
 \usepackage[capitalise]{cleveref}
@@ -13,6 +14,13 @@
 \usepackage{pdfpages}
 \usepackage{lipsum}
 
+% todonotes
+% Color scheme
+% LightCoral -> Section Placeholder
+% Red -> Urgent todo
+% LighSkyBlue -> Regular todo
+\usepackage[backgroundcolor=LightSkyBlue,colorinlistoftodos]{todonotes}
+
 \DeclareMathOperator*{\argmin}{arg\,min}
 
 \newcommand{\grad}{\nabla}
@@ -21,7 +29,6 @@
 \newcommand{\Set}[1]{\left\{ #1 \right\}}
 
 \newcommand{\mat}[1]{\bm{#1}}
-\newcommand{\reals}{\mathbb{R}}
 \newcommand{\wrt}{\textrm{d}}
 \newcommand{\abs}[1]{|#1|}
 \newcommand{\Norm}[1]{\left\|#1\right\|}
@@ -39,7 +46,6 @@
 
 \newcommand{\email}[1]{\protect\href{mailto:#1}{#1}}
 
-\newcommand{\todo}[1]{{\color{red}{#1}}}
 \newcommand\funding[1]{\protect\\ \hspace*{1.8em}{\bfseries Funding:} #1}
 \newcommand{\mylozenge}{$\mathbin{\blacklozenge}$}
 \newcommand{\R}{\mathbb{R}}
@@ -84,6 +90,7 @@
 \DeclareAcronym{pnm}{short=PNM, long=Probabilistic Numerical Method}
 \DeclareAcronym{ivp}{short=IVP, long=initial value problem}
 \DeclareAcronym{gmrf}{short=GMRF, long=Gaussian Markov Random Field}
+\DeclareAcronym{as}{short=AS, long=Active subspace, long-plural-form=Active subspaces, short-plural-form=AS}
 
 % \title{Theoretical Guarantees for the Statistical Finite Element Method}
 
