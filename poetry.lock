@@ -1480,7 +1480,7 @@ tpu = ["jax[tpu] (>=0.4)"]
 type = "git"
 url = "https://github.com/pyro-ppl/numpyro"
 reference = "HEAD"
-resolved_reference = "bb9e1ba51875fb554d1a2c11811a02db6477bd2f"
+resolved_reference = "2897f4a276d79d20b02634549da2b6100d812cfb"
 
 [[package]]
 name = "omegaconf"
@@ -2072,7 +2072,7 @@ test = ["pytest", "pytest-cov"]
 type = "git"
 url = "https://github.com/SaitejaUtpala/rieoptax.git"
 reference = "HEAD"
-resolved_reference = "1954a45e9e2b8e14307fefd1cd2ae494402cf4ab"
+resolved_reference = "abb1fc5e01143a5f8f251c0a47a170293f44379a"
 
 [[package]]
 name = "scikit-learn"
