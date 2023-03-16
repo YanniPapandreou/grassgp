@@ -603,7 +603,7 @@ packaging = "*"
 
 [[package]]
 name = "hydra-zen"
-version = "0.8.0"
+version = "0.10.0"
 description = "Configurable, reproducible, and scalable workflows in Python, via Hydra"
 category = "main"
 optional = false
@@ -616,6 +616,7 @@ typing-extensions = ">=4.1.0"
 [package.extras]
 beartype = ["beartype (>=0.8.0)"]
 pydantic = ["pydantic (>=1.8.2)"]
+test = ["hypothesis (>=6.28.0)", "pytest (>=3.8)"]
 
 [[package]]
 name = "idna"
@@ -1479,7 +1480,7 @@ tpu = ["jax[tpu] (>=0.4)"]
 type = "git"
 url = "https://github.com/pyro-ppl/numpyro"
 reference = "HEAD"
-resolved_reference = "2897f4a276d79d20b02634549da2b6100d812cfb"
+resolved_reference = "bb9e1ba51875fb554d1a2c11811a02db6477bd2f"
 
 [[package]]
 name = "omegaconf"
@@ -2071,7 +2072,7 @@ test = ["pytest", "pytest-cov"]
 type = "git"
 url = "https://github.com/SaitejaUtpala/rieoptax.git"
 reference = "HEAD"
-resolved_reference = "abb1fc5e01143a5f8f251c0a47a170293f44379a"
+resolved_reference = "1954a45e9e2b8e14307fefd1cd2ae494402cf4ab"
 
 [[package]]
 name = "scikit-learn"
@@ -2655,7 +2656,7 @@ viz = ["matplotlib", "nc-time-axis", "seaborn"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "e9f8875b1ba5f566514690fbc01a20f20b55bf7fa579e0471b158d90d89146c4"
+content-hash = "46f5692c5ac0ba2da66ac7c33f187c655f0ab55468166d3b8dd7c1409b341ab7"
 
 [metadata.files]
 absl-py = [
@@ -3064,8 +3065,8 @@ hydra-core = [
     {file = "hydra_core-1.3.0-py3-none-any.whl", hash = "sha256:47dac77149992ce3f4f36491f52d98e85f249b156410f4e1b99eea77a0a6674b"},
 ]
 hydra-zen = [
-    {file = "hydra_zen-0.8.0-py3-none-any.whl", hash = "sha256:4448c1b401ab703c1d9f2cba2961c4b8262e9eb4363476da40c314fc471f99c1"},
-    {file = "hydra_zen-0.8.0.tar.gz", hash = "sha256:0133f5d1fcb813636424ab3b285cd34186138c2825bfe5eaefcf7aed4ebcbc48"},
+    {file = "hydra_zen-0.10.0-py3-none-any.whl", hash = "sha256:78c3cddb8b7063317a3685edb570c209425988b8f5f08902e13b5e6ead46d9af"},
+    {file = "hydra_zen-0.10.0.tar.gz", hash = "sha256:7f9006be601efb07cefd5a88ec6135194edbf27dced73b6d620269a0274f44a3"},
 ]
 idna = [
     {file = "idna-3.4-py3-none-any.whl", hash = "sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2"},
