@@ -1,3 +1,4 @@
+from typing import Union
 import jax.numpy as np
 from jax import jit, vmap, random, lax
 import jax.numpy.linalg as lin
@@ -5,6 +6,7 @@ from functools import partial
 from grassgp.utils import multiprod, multitransp
 from pymanopt.manifolds.grassmann import Grassmann
 from pymanopt.optimizers.nelder_mead import compute_centroid
+import chex
 
 
 @partial(jit, static_argnums=1)
@@ -266,7 +268,7 @@ def compute_barycenter(Ws):
 
 
 
-def sample_karcher_mean(points, steps:int = 100, seed:int = 42):
+def sample_karcher_mean(points: chex.ArrayDevice, steps: int = 100, seed: Union[int,None] = None, start_ind: Union[int, None] = 0, start_point: Union[chex.ArrayDevice, None] = None):
     def gradient_step(mu_prev, time, Ws):
         logs = vmap(lambda W: grass_log(mu_prev, W))(Ws)
         delta_mu = logs.mean(axis=0)
@@ -276,8 +278,19 @@ def sample_karcher_mean(points, steps:int = 100, seed:int = 42):
     update_func = partial(gradient_step, Ws=points)
     timesteps = np.arange(steps)
     N = points.shape[0]
-    key = random.PRNGKey(seed)
-    mu_0 = points[random.choice(key, np.arange(N))]
+    if seed is not None:
+        assert (start_ind is None), "`seed` and `start_ind` both specified; please only specify one."
+        assert (start_point is None), "`seed` and `start_point` both specified; please only specify one."
+        key = random.PRNGKey(seed)
+        mu_0 = points[random.choice(key, np.arange(N))]
+    elif start_ind is not None:
+        assert (start_point is None), "`start_point` and `start_ind` both specified; please only specify one."
+        mu_0 = points[start_ind]
+    elif start_point is not None:
+        mu_0 = start_point
+    else:
+        raise ValueError("One of `seed`, `start_ind`, or `start_point` must be specified.")
+    
     final, result = lax.scan(update_func, init=mu_0, xs=timesteps)
     return final, result, mu_0
     
