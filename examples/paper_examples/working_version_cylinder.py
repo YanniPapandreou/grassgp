@@ -47,6 +47,8 @@ import pickle
 import pandas as pd
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
+# plt.rc('text', usetex=True)
+# plt.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
 plt.rcParams["figure.figsize"] = (10,6)
 
 
@@ -1006,7 +1008,10 @@ def train_analyse(cfg):
         dists = vmap(lambda W: grass_dist(W, fixed))(Ws_preds[:,i,:,:])
         dists_Sq = dists**2
         sd_s_test_preds.append(np.sqrt(dists_Sq.mean()))
-        
+    
+    sd_s_test_means = np.array(sd_s_test_means)
+    sd_s_test_preds = np.array(sd_s_test_preds)
+    
     test_pd_data = {'s': s_test, 'errors_mean': out_sample_mean_errors, 'errors_pred': out_sample_pred_errors, 'sd_mean': sd_s_test_means, 'sd_pred': sd_s_test_preds}
     out_sample_errors_df = pd.DataFrame(data=test_pd_data)
     
@@ -1222,7 +1227,7 @@ def load_analyse(cfg):
         plt.legend()
         plt.show()
 
-# %% tags=[]
+# %% tags=[] jupyter={"outputs_hidden": true}
 load_analyse(Config)
 
 # %% tags=[]
@@ -1358,12 +1363,15 @@ in_sample_errors_df.describe()
 
 # %%
 def out_of_sample_pred_plots(cfg):
+    plt.rc('text', usetex=True)
+    plt.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
     Deltas_means = pickle_load("Deltas_means.pickle")
     Deltas_preds = pickle_load("Deltas_preds.pickle")
     assert np.isnan(Deltas_means).sum() == 0
     assert np.isnan(Deltas_preds).sum() == 0
     
-    fig, axs = plt.subplots(1,2,figsize=(20,5),sharey=False)
+    fig, axs = plt.subplots(2,1,figsize=(12,12),sharey=False)
+    ordinals_dict = {1: 'st', 2: 'nd', 3: 'rd'}
     percentile_levels = [2.5, 97.5]
     conf_level = percentile_levels[-1] - percentile_levels[0]
     for i in range(d):
@@ -1374,17 +1382,18 @@ def out_of_sample_pred_plots(cfg):
         percentiles = np.percentile(preds, np.array(percentile_levels), axis=0)
         lower = percentiles[0,:]
         upper = percentiles[1,:]
-        axs[i].plot(s_test, log_Ws_test[:,i,0], label='full data',c='black', alpha=0.75, linestyle='dashed')
-        axs[i].scatter(s_train, log_Ws_train[:,i,0], label='training data', c='g')
+        axs[i].plot(s_test, log_Ws_test[:,i,0], label='test data',c='black', alpha=0.75, linestyle='dashed')
+        axs[i].scatter(s_train, log_Ws_train[:,i,0], label='train data', c='g')
         axs[i].plot(s_test, means_avg, label='averaged mean prediction', c='r', alpha=0.75)
         axs[i].fill_between(s_test, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
         axs[i].set_xlabel(r"$s$")
         axs[i].grid()
         axs[i].legend()
         # axs[i].vlines(s_train, 0.99*lower.min(), 1.01*upper.max(), colors='green', linestyles='dashed')
-        axs[i].set_title(f"{i+1}th component of tangents")
+        axs[i].set_title(f'{i+1}{ordinals_dict[i+1]} component of ' + r'$\mathbf{U}(s)$')
     
     axs[0].set_ylim([-0.01,0.01])
+    fig.savefig('out-sample-tangent-predictions-plot.png',dpi=300,bbox_inches='tight',facecolor="w")
     plt.show()
 
     Ws_means = pickle_load("Ws_means.pickle")
@@ -1401,22 +1410,49 @@ def out_of_sample_pred_plots(cfg):
     percentiles = np.percentile(alphas_preds, np.array(percentile_levels), axis=0)
     lower = percentiles[0,:]
     upper = percentiles[1,:]
-    fig = plt.figure(figsize=(10,5))
+    fig = plt.figure(figsize=(12,6))
     ax = fig.add_subplot(111)
-    ax.plot(s_test, alphas, label='full data',c='black', alpha=0.75, linestyle='dashed')
-    ax.scatter(s_train, alphas_train, label='training data', c='g')
+    ax.plot(s_test, alphas, label='test data',c='black', alpha=0.75, linestyle='dashed')
+    ax.scatter(s_train, alphas_train, label='train data', c='g')
     ax.plot(s_test, alphas_means_avg, label='averaged mean prediction', c='r', alpha=0.75)
     ax.fill_between(s_test, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
     ax.set_xlabel(r"$s$")
-    ax.set_ylabel("subspace angle")
+    ax.set_ylabel(r"$\alpha(s)$")
     ax.legend()
     ax.grid()
     # ax.vlines(s_train, 0, np.pi, colors='green', linestyles='dashed')
-    ax.set_title(f"predictions for subspace angles")
+    # ax.set_title(f"predictions for subspace angles")
+    fig.savefig('out-sample-subspace-angle-plot.png',dpi=300,bbox_inches='tight',facecolor="w")
     plt.show()
 
 
 # %%
 out_of_sample_pred_plots(Config)
+
+# %%
+out_sample_errors_df = pickle_load("out_sample_errors_df.pickle")
+    
+out_sample_mean_errors = out_sample_errors_df["errors_mean"]
+out_sample_pred_errors = out_sample_errors_df["errors_pred"]
+sd_s_test_means = out_sample_errors_df["sd_mean"]
+sd_s_test_preds = out_sample_errors_df["sd_pred"]
+upper_mean = out_sample_mean_errors + sd_s_test_means
+upper_pred = out_sample_pred_errors + sd_s_test_preds
+
+fig = plt.figure(figsize=(12,6))
+ax = fig.add_subplot(111)
+ax.plot(s_test,out_sample_mean_errors, c='k', alpha=0.75, label='error using means')
+ax.plot(s_test,out_sample_pred_errors, c='b', alpha=0.75, label='error using preds')
+ax.vlines(s_train, 0, 1.2, colors="green", linestyles="dashed")
+ax.fill_between(s_test, np.array(out_sample_pred_errors), np.array(upper_pred), color='lightblue', alpha=0.75, label=f'error + 1 std using means')
+ax.fill_between(s_test, np.array(out_sample_mean_errors), np.array(upper_mean), color='coral', alpha=0.75, label=f'error + 1 std using preds')
+ax.set_xlabel(r"$s$")
+ax.legend()
+ax.grid()
+fig.savefig('out-sample-error-plot.png',dpi=300,bbox_inches='tight',facecolor="w")
+plt.show()
+
+# %%
+out_sample_errors_df.describe()
 
 # %%
