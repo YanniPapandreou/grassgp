@@ -297,4 +297,4 @@ plt.show()
 jnp.abs(y_dagger - y_star)
 
 # %%
-jnp.abs(
+jnp.abs(x_dagger - x_star)
