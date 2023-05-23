@@ -31,7 +31,7 @@ from grassgp.means import zero_mean
 from grassgp.kernels import rbf
 from grassgp.models_optimised import GrassGP
 from grassgp.plot_utils import flatten_samples, plot_grass_dists
-from grassgp.utils import to_dictconf, get_save_path, vec
+from grassgp.utils import to_dictconf, get_save_path, vec, unvec
 from grassgp.utils import safe_save_jax_array_dict as safe_save
 from grassgp.utils import load_and_convert_to_samples_dict as load_data
 
@@ -139,6 +139,128 @@ assert valid_grass_point(anchor_point)
 # %%
 # compute log of training data
 log_Ws_train = vmap(lambda W: grass_log(anchor_point, W))(Ws_train)
+
+
+# %%
+@chex.dataclass
+class FullMatGP:
+    d_in: int
+    d_out: Tuple[int, int]
+    mu: Callable = field(repr=False)
+    k: Callable = field(repr=False)
+    Omega: chex.ArrayDevice = field(repr=False)
+    cov_jitter: float = field(default=1e-8, repr=False)
+
+    def __post_init__(self):
+        d, n = self.d_out
+        d_n = d * n
+        assert_shape(self.Omega, (d_n, d_n),
+                    custom_message=f"Omega has shape {self.Omega.shape}; expected shape {(d_n, d_n)}")
+
+    def model(self, s: chex.ArrayDevice, use_kron_chol: bool = True) -> chex.ArrayDevice:
+        d, n = self.d_out
+        d_n = d * n
+        assert_rank(s, self.d_in)
+        N = s.shape[0]
+
+        # compute mean matrix M = [mu(s[1]), mu(s[2]), ..., mu(s[N])]
+        M = np.hstack(vmap(self.mu)(s))
+        assert_shape(M, (d, n*N))
+
+        # compute kernel matrix
+        K = self.k(s, s)
+        # cond_num = numpyro.deterministic("cond_num", lin.cond(K))
+        assert_shape(K, (N, N))
+
+        # compute covariance matrix and cholesky factor
+        if use_kron_chol:
+            Chol = kron_chol(K + self.cov_jitter * np.eye(N), self.Omega)
+        else:
+            Cov = np.kron(K + self.cov_jitter * np.eye(N), self.Omega)
+            Chol = lin.cholesky(Cov)
+
+        # sample vec_Vs
+        # Z = numpyro.sample("Z", dist.MultivariateNormal(covariance_matrix=np.eye(N*d_n)))
+        Z = numpyro.sample("Z", dist.Normal().expand([N*d_n]))
+        vec_Vs = numpyro.deterministic("vec_Vs", vec(M) + Chol @ Z)
+
+        # form Vs
+        Vs = numpyro.deterministic("Vs", vmap(lambda params: unvec(params, d, n))(np.array(vec_Vs.split(N))))
+        return Vs
+
+    def sample(self, seed: int, s: chex.ArrayDevice) -> chex.ArrayDevice:
+        model = self.model
+        seeded_model = handlers.seed(model, rng_seed=seed)
+        return seeded_model(s)
+
+    def predict(self, key: chex.ArrayDevice, s_test: chex.ArrayDevice, s_train: chex.ArrayDevice, Vs_train: chex.ArrayDevice, jitter: float = 1e-8) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
+        d, n = self.d_out
+        d_in = self.d_in
+        d_n = d * n
+        N_train = s_train.shape[0]
+        N_test = s_test.shape[0]
+        if d_in > 1:
+            assert s_train.shape[1] == d_in
+            assert s_test.shape[1] == d_in
+
+        # compute means
+        M_train = np.hstack(vmap(self.mu)(s_train))
+        M_test = np.hstack(vmap(self.mu)(s_test))
+        assert_shape(M_train, (d, n*N_train))
+        assert_shape(M_test, (d, n*N_test))
+
+        # compute kernels between train and test locs
+        K_train_train = self.k(s_train, s_train)
+        assert_shape(K_train_train, (N_train, N_train))
+        K_train_test = self.k(s_train, s_test)
+        assert_shape(K_train_test, (N_train, N_test))
+        K_test_train = K_train_test.T
+        K_test_test = self.k(s_test, s_test)
+        assert_shape(K_test_test, (N_test, N_test))
+
+        # compute posterior mean and cov
+        K_test_train_Omega = np.kron(K_test_train, self.Omega)
+        K_train_test_Omega = np.kron(K_train_test, self.Omega)
+        K_test_test_Omega = np.kron(K_test_test, self.Omega)
+        # FIX: change for singular Omega
+        # print(f"Rank of Omega = {lin.matrix_rank(self.Omega)}. Shape of Omega = {self.Omega.shape}")
+        # if lin.matrix_rank(self.Omega) == d_n:
+        #     mean_sols = kron_solve(K_train_train, self.Omega, vec(np.hstack(Vs_train)) - vec(M_train))
+        #     cov_sols = vmap(lambda v: kron_solve(K_train_train, self.Omega, v), in_axes=1, out_axes=1)(K_train_test_Omega)
+        # else:
+        #     K_train_train_inv = lin.inv(K_train_train)
+        #     Omega_pinv = lin.pinv(self.Omega)
+        #     K_train_train_Omega_pinv = np.kron(K_train_train_inv, Omega_pinv)
+        #     mean_sols = K_train_train_Omega_pinv @ (vec(np.hstack(Vs_train)) - vec(M_train))
+        #     cov_sols = K_train_train_Omega_pinv @ K_train_test_Omega
+        K_train_train_inv = lin.inv(K_train_train)
+        Omega_pinv = lin.pinv(self.Omega)
+        K_train_train_Omega_pinv = np.kron(K_train_train_inv, Omega_pinv)
+        mean_sols = K_train_train_Omega_pinv @ (vec(np.hstack(Vs_train)) - vec(M_train))
+        cov_sols = K_train_train_Omega_pinv @ K_train_test_Omega
+        
+        vec_post_mean = vec(M_test) + K_test_train_Omega @ mean_sols
+        assert_shape(vec_post_mean, (d*n*N_test,),
+                     custom_message=f"vec_post_mean should have shape {(d*n*N_test,)}; obtained {vec_post_mean.shape}")
+
+        # cov_sols = vmap(lambda v: kron_solve(K_train_train, self.Omega, v), in_axes=1, out_axes=1)(K_train_test_Omega)
+        post_cov = K_test_test_Omega - K_test_train_Omega @ cov_sols
+        assert_shape(post_cov, (d*n*N_test, d*n*N_test),
+                     custom_message=f"post_cov should have shape {(d*n*N_test,d*n*N_test)}; obtained {post_cov.shape}")
+
+        # sample predictions
+        post_cov += jitter * np.eye(d*n*N_test)
+        
+        # FIX: change for singular post_cov
+        # print(f"Rank of posterior cov = {lin.matrix_rank(post_cov)}. Shape of posterior cov = {post_cov.shape}")
+        vec_pred = dist.MultivariateNormal(loc=vec_post_mean, covariance_matrix=post_cov).sample(key)
+        assert_shape(vec_pred, (d*n*N_test,),
+                     custom_message=f"vec_pred should have shape {(d*n*N_test,)}; obtained {vec_pred.shape}")
+
+        # unvec mean and preds and return
+        post_mean = vmap(lambda params: unvec(params, d, n))(np.array(vec_post_mean.split(N_test)))
+        pred = vmap(lambda params: unvec(params, d, n))(np.array(vec_pred.split(N_test)))
+        return post_mean, pred
 
 
 # %%
@@ -293,6 +415,22 @@ class GrassGP:
         Deltas = self.sample_tangents(seed, s)
         Ws = convert_to_projs(Deltas, self.U, reorthonormalize=reortho)
         return Ws
+    
+    def predict_tangents(self, key: chex.ArrayDevice, s_test: chex.ArrayDevice, s_train: chex.ArrayDevice, Vs_train: chex.ArrayDevice, jitter: float = 1e-8) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
+        d, _ = self.d_out
+        I_UUT = np.eye(d) - self.U @ self.U.T
+        V_mu = lambda s: I_UUT @ self.mu(s)
+        Omega = np.diag(self.Omega_diag_chol ** 2)
+        V_Omega = I_UUT @ Omega @ I_UUT.T
+        V = FullMatGP(d_in=self.d_in, d_out=self.d_out, mu=V_mu, k=self.k, Omega=V_Omega, cov_jitter=self.cov_jitter)
+        Deltas_mean, Deltas_pred = V.predict(key, s_test, s_train, Vs_train, jitter=jitter)
+        return Deltas_mean, Deltas_pred
+
+    def predict_grass(self, key: chex.ArrayDevice, s_test: chex.ArrayDevice, s_train: chex.ArrayDevice, Vs_train: chex.ArrayDevice, jitter: float = 1e-8, reortho: bool = False) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
+        Deltas_mean, Deltas_pred = self.predict_tangents(key, s_test, s_train, Vs_train, jitter=jitter)
+        Ws_mean = convert_to_projs(Deltas_mean, self.U, reorthonormalize=reortho)
+        Ws_pred = convert_to_projs(Deltas_pred, self.U, reorthonormalize=reortho)
+        return Ws_mean, Ws_pred
 
 #     def predict_tangents(self, key: chex.ArrayDevice, s_test: chex.ArrayDevice, s_train: chex.ArrayDevice, Vs_train: chex.ArrayDevice, jitter: float = 1e-8) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
 #         d, _ = self.d_out
@@ -434,7 +572,7 @@ SVIConfig = make_config(
 
 TrainConfig = make_config(
     seed = 9870687,
-    n_warmup = 2000,
+    n_warmup = 5000,
     n_samples = 7000,
     n_chains = 1,
     n_thinning = 2
@@ -447,7 +585,7 @@ PredictConfig = make_config(
 
 PlotsConfig = make_config(
     acf_lags = 100,
-    plot = True,
+    plot = False,
 )
 
 Config = make_config(
@@ -541,29 +679,318 @@ def train(cfg):
     if save_results:
         pickle_save(inference_data, "inference_data.pickle")
     
-    samples = dict(filter(lambda elem: 'initial_value' not in elem[0], inference_data.items()))
-    initial_values = dict(filter(lambda elem: 'initial_value' in elem[0], inference_data.items()))
-    assert set(samples.keys()).union(initial_values.keys()) == set(inference_data.keys())
+#     samples = dict(filter(lambda elem: 'initial_value' not in elem[0], inference_data.items()))
+#     initial_values = dict(filter(lambda elem: 'initial_value' in elem[0], inference_data.items()))
+#     assert set(samples.keys()).union(initial_values.keys()) == set(inference_data.keys())
     
-    if plot_figs:
-        my_samples = flatten_samples(samples, ignore=[])
-        trace_plot_vars = ['kernel_length']
-        for key in my_samples.keys():
-            if 'Omega' in key:
-                trace_plot_vars.append(key)
-            if 'sigmas' in key:
-                trace_plot_vars.append(key)
+#     if plot_figs:
+#         my_samples = flatten_samples(samples, ignore=[])
+#         trace_plot_vars = ['kernel_length']
+#         for key in my_samples.keys():
+#             if 'Omega' in key:
+#                 trace_plot_vars.append(key)
+#             if 'sigmas' in key:
+#                 trace_plot_vars.append(key)
 
-        my_samples[trace_plot_vars].plot(subplots=True, figsize=(10,40), sharey=False)
-        plt.show()
+#         my_samples[trace_plot_vars].plot(subplots=True, figsize=(10,40), sharey=False)
+#         plt.show()
         
-        for var in trace_plot_vars:
-            sm.graphics.tsa.plot_acf(my_samples[var], lags=cfg.plots.acf_lags)
-            plt.title(f"acf for {var}")
-            plt.show()
+#         for var in trace_plot_vars:
+#             sm.graphics.tsa.plot_acf(my_samples[var], lags=cfg.plots.acf_lags)
+#             plt.title(f"acf for {var}")
+#             plt.show()
 
 
 # %%
 train(Config)
+
+# %%
+inference_data = pickle_load("inference_data.pickle")
+samples = dict(filter(lambda elem: 'initial_value' not in elem[0], inference_data.items()))
+initial_values = dict(filter(lambda elem: 'initial_value' in elem[0], inference_data.items()))
+assert set(samples.keys()).union(initial_values.keys()) == set(inference_data.keys())
+
+
+my_samples = flatten_samples(samples, ignore=[])
+trace_plot_vars = ['kernel_length']
+# for key in my_samples.keys():
+#     if 'Omega' in key:
+#         trace_plot_vars.append(key)
+#     if 'sigmas' in key:
+#         trace_plot_vars.append(key)
+
+my_samples[trace_plot_vars].plot(subplots=True, figsize=(10,6), sharey=False)
+plt.show()
+
+for var in trace_plot_vars:
+    sm.graphics.tsa.plot_acf(my_samples[var], lags=Config.plots.acf_lags)
+    plt.title(f"acf for {var}")
+    plt.show()
+
+# %%
+trace_plot_vars = []
+for name in my_samples.columns:
+    if "Omega" in name:
+        trace_plot_vars.append(name)
+
+# %%
+my_samples.plot(y=trace_plot_vars,legend=False,alpha=0.75)
+plt.show()
+
+
+# %% [markdown]
+# # Predictions
+
+# %%
+def predict_tangents(
+    key: chex.ArrayDevice,
+    s_test: chex.ArrayDevice,
+    s_train: chex.ArrayDevice,
+    Vs_train: chex.ArrayDevice,
+    cfg,
+    samples: dict,
+    jitter: float = 1e-8
+) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
+    
+    d_in = cfg.model.d_in
+    U = np.array(cfg.model.anchor_point)
+    d, n = U.shape
+    cov_jitter = cfg.model.cov_jitter
+    k_include_noise = cfg.model.k_include_noise
+    kern_jitter = cfg.model.jitter
+    n_samples = cfg.train.n_samples // cfg.train.n_thinning
+    assert n_samples == samples['Deltas'].shape[0]
+    
+    def predict(
+        key: chex.ArrayDevice,
+        Omega_diag_chol: chex.ArrayDevice,
+        var: float,
+        length: float,
+        noise: float,
+    ) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
+        # iniatilize GrassGP
+        kernel_params = {'var': var, 'length': length, 'noise': noise}
+        k = lambda t, s: rbf(t, s, kernel_params, jitter=kern_jitter, include_noise=k_include_noise)
+        mu = lambda s: zero_mean(s, d, n)
+        grass_gp = GrassGP(d_in=d_in, d_out=(d, n), mu=mu, k=k, Omega_diag_chol=Omega_diag_chol, U=U, cov_jitter=cov_jitter)
+
+        # predict
+        Deltas_mean, Deltas_pred = grass_gp.predict_tangents(key, s_test, s_train, Vs_train, jitter=jitter)
+        return Deltas_mean, Deltas_pred
+
+    # initialize vmap args
+    vmap_args = (random.split(key, n_samples),)
+    
+    cfg_Omega_diag_chol = cfg.model.Omega_diag_chol
+    cfg_var = cfg.model.var
+    cfg_length = cfg.model.length
+    cfg_noise = cfg.model.noise
+    cfg_require_noise = cfg.model.require_noise
+    
+    if cfg_Omega_diag_chol is None:
+        vmap_args += (samples['Omega_diag_chol'],)
+    else:
+        cfg_Omega_diag_chol = np.array(cfg_Omega_diag_chol)
+        vmap_args += (np.repeat(cfg_Omega_diag_chol[None,:,:], n_samples, axis=0),)
+    
+    if cfg_var is None:
+        vmap_args += (samples['kernel_var'],)
+    else:
+        vmap_args += (cfg_var * np.ones(n_samples),)
+        
+    if cfg_length is None:
+        vmap_args += (samples['kernel_length'],)
+    else:
+        vmap_args += (cfg_length * np.ones(n_samples),)
+        
+    if cfg_require_noise:
+        if cfg_noise is None:
+            vmap_args += (samples['kernel_noise'],)
+        else:
+            vmap_args += (cfg_noise * np.ones(n_samples),)
+    else:
+        vmap_args += (np.zeros(n_samples),)
+    
+    assert len(vmap_args) == 5
+    # Deltas_means, Deltas_preds = vmap(predict)(*vmap_args)
+    Deltas_means = []
+    Deltas_preds = []
+    for i in tqdm(range(n_samples)):
+        rand_key = vmap_args[0][i]
+        Omega_diag_chol = vmap_args[1][i]
+        var = vmap_args[2][i]
+        length = vmap_args[3][i]
+        noise = vmap_args[4][i]
+        mean, pred = predict(rand_key, Omega_diag_chol, var, length, noise)
+        Deltas_means.append(mean)
+        Deltas_preds.append(pred)
+    
+    Deltas_means = np.array(Deltas_means)
+    Deltas_preds = np.array(Deltas_preds)
+    return Deltas_means, Deltas_preds
+
+
+# %%
+def predict_grass(
+    key: chex.ArrayDevice,
+    s_test: chex.ArrayDevice,
+    s_train: chex.ArrayDevice,
+    Vs_train: chex.ArrayDevice,
+    cfg,
+    samples: dict,
+    jitter: float = 1e-8,
+    reortho: bool = False
+) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
+    
+    d_in = cfg.model.d_in
+    U = np.array(cfg.model.anchor_point)
+    d, n = U.shape
+    cov_jitter = cfg.model.cov_jitter
+    k_include_noise = cfg.model.k_include_noise
+    kern_jitter = cfg.model.jitter
+    n_samples = cfg.train.n_samples // cfg.train.n_thinning
+    assert n_samples == samples['Deltas'].shape[0]
+    
+    def predict(
+        key: chex.ArrayDevice,
+        Omega_diag_chol: chex.ArrayDevice,
+        var: float,
+        length: float,
+        noise: float,
+    ) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
+        # iniatilize GrassGP
+        kernel_params = {'var': var, 'length': length, 'noise': noise}
+        k = lambda t, s: rbf(t, s, kernel_params, jitter=kern_jitter, include_noise=k_include_noise)
+        mu = lambda s: zero_mean(s, d, n)
+        grass_gp = GrassGP(d_in=d_in, d_out=(d, n), mu=mu, k=k, Omega_diag_chol=Omega_diag_chol, U=U, cov_jitter=cov_jitter)
+
+        # predict
+        Ws_mean, Ws_pred = grass_gp.predict_grass(key, s_test, s_train, Vs_train, jitter=jitter, reortho=reortho)
+        return Ws_mean, Ws_pred
+
+    # initialize vmap args
+    vmap_args = (random.split(key, n_samples),)
+    
+    cfg_Omega_diag_chol = cfg.model.Omega_diag_chol
+    cfg_var = cfg.model.var
+    cfg_length = cfg.model.length
+    cfg_noise = cfg.model.noise
+    cfg_require_noise = cfg.model.require_noise
+    
+    if cfg_Omega_diag_chol is None:
+        vmap_args += (samples['Omega_diag_chol'],)
+    else:
+        cfg_Omega_diag_chol = np.array(cfg_Omega_diag_chol)
+        vmap_args += (np.repeat(cfg_Omega_diag_chol[None,:,:], n_samples, axis=0),)
+    
+    if cfg_var is None:
+        vmap_args += (samples['kernel_var'],)
+    else:
+        vmap_args += (cfg_var * np.ones(n_samples),)
+        
+    if cfg_length is None:
+        vmap_args += (samples['kernel_length'],)
+    else:
+        vmap_args += (cfg_length * np.ones(n_samples),)
+        
+    if cfg_require_noise:
+        if cfg_noise is None:
+            vmap_args += (samples['kernel_noise'],)
+        else:
+            vmap_args += (cfg_noise * np.ones(n_samples),)
+    else:
+        vmap_args += (np.zeros(n_samples),)
+    
+    assert len(vmap_args) == 5
+    # Ws_means, Ws_preds = vmap(predict)(*vmap_args)
+    Ws_means = []
+    Ws_preds = []
+    for i in tqdm(range(n_samples)):
+        rand_key = vmap_args[0][i]
+        Omega_diag_chol = vmap_args[1][i]
+        var = vmap_args[2][i]
+        length = vmap_args[3][i]
+        noise = vmap_args[4][i]
+        mean, pred = predict(rand_key, Omega_diag_chol, var, length, noise)
+        Ws_means.append(mean)
+        Ws_preds.append(pred)
+    
+    Ws_means = np.array(Ws_means)
+    Ws_preds = np.array(Ws_preds)
+    return Ws_means, Ws_preds
+
+
+# %%
+# compute Ws's from mcmc samples
+tol=1e-5
+samples_Ws_train = vmap(lambda Deltas: convert_to_projs(Deltas, anchor_point, reorthonormalize=False))(samples['Deltas'])
+for ws in samples_Ws_train:
+    assert vmap(lambda w: valid_grass_point(w, tol=tol))(ws).all()
+
+# %%
+pickle_save(samples_Ws_train, "samples_Ws_train.pickle")
+
+# %%
+mcmc_barycenters = []
+for i in tqdm(range(s_train.shape[0])):
+    points = samples_Ws_train[:,i,:,:]
+    barycenter, _, _ = sample_karcher_mean(points)
+    mcmc_barycenters.append(barycenter)
+
+# %%
+mcmc_barycenters = np.array(mcmc_barycenters)
+
+# %%
+pickle_save(mcmc_barycenters, "mcmc_barycenters.pickle")
+
+# %%
+in_sample_errors = vmap(grass_dist)(Ws_train, mcmc_barycenters)
+# plt.plot(s_train,in_sample_errors)
+# plt.show()
+
+# %%
+sd_s_train = []
+for i in tqdm(range(s_train.shape[0])):
+    fixed = mcmc_barycenters[i]
+    dists = vmap(lambda W: grass_dist(W, fixed))(samples_Ws_train[:,i,:,:])
+    dists_Sq = dists**2
+    sd_s_train.append(np.sqrt(dists_Sq.mean()))
+sd_s_train = np.array(sd_s_train)
+
+# %%
+pd_data = {'s': s_train, 'errors': in_sample_errors, 'sd': sd_s_train}
+in_sample_errors_df = pd.DataFrame(data=pd_data)
+
+# %%
+pickle_save(in_sample_errors_df, "in_sample_errors_df.pickle")
+
+# %%
+errs = vmap(lambda i: vmap(grass_dist)(samples_Ws_train[i], Ws_train))(np.arange(samples_Ws_train.shape[0]))
+
+# %%
+errs.shape
+
+# %%
+errs.mean(axis=0)
+
+# %%
+cfg = Config
+print("Prediction starting")
+pred_key = random.PRNGKey(cfg.predict.seed)
+pred_key_tangent, pred_key_grass = random.split(pred_key, 2)
+
+# %%
+# splits = 20
+# pred_keys_tangent = random.split(pred_key_tangent, splits)
+# pred_keys_grass = random.split(pred_key_grass, splits)
+# pred_results_tangent_chunked = {}
+# for (i, s_test_chunk) in tqdm(enumerate(np.split(s_test, splits))):
+#     p_key = pred_keys_tangent[i]
+#     pred_results_tangent_chunked[i] = predict_tangents(p_key, s_test_chunk, s_train, log_Ws_train, cfg, samples)
+
+# %%
+Deltas_means, Deltas_preds = predict_tangents(pred_key_tangent, s_test, s_train, log_Ws_train, cfg, samples)
+assert np.isnan(Deltas_means).sum() == 0
+assert np.isnan(Deltas_preds).sum() == 0
 
 # %%
