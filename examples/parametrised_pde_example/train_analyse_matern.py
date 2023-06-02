@@ -23,7 +23,7 @@ import pickle
 from pathlib import Path
 
 import jax.numpy as np
-from jax import vmap, random, grad
+from jax import vmap, random, grad, jit
 import jax.numpy.linalg as lin
 from functools import partial
 from tqdm import tqdm
