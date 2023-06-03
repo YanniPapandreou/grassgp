@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -705,7 +705,7 @@ def predict_grass(
     return Ws_means, Ws_preds
 
 
-# %% tags=[]
+# %%
 def train_analyse(cfg):
     # instantiate grass model
     model = instantiate(cfg.model).model
@@ -1077,6 +1077,25 @@ def load_analyse(cfg):
             plt.title(f"acf for {var}")
             plt.show()
     
+    if plot_figs:
+        plt.rcParams["figure.figsize"] = (12,6)
+        percentile_levels = [2.5, 97.5]
+        conf_level = percentile_levels[-1] - percentile_levels[0]
+        for i in range(d):
+            obs = log_Ws_train[:,i,0]
+            preds = samples['Deltas'][:,:,i,0]
+            percentiles = np.percentile(preds, np.array(percentile_levels), axis=0)
+            lower = percentiles[0,:]
+            upper = percentiles[1,:]
+            plt.plot(s_test, log_Ws_test[:,i,0], label='full data',c='black', alpha=0.75, linestyle='dashed')
+            plt.scatter(s_train, log_Ws_train[:,i,0], label='training data', c='g')
+            plt.fill_between(s_train, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
+            plt.xlabel(r"$s$")
+            plt.legend()
+            plt.vlines(s_train, 0.99*lower.min(), 1.01*upper.max(), colors='green', linestyles='dashed')
+            plt.title(f"{i+1}th component of tangents")
+            plt.show()
+    
     # compute Ws's from mcmc samples
     tol=1e-5
     samples_Ws_train = pickle_load("samples_Ws_train.pickle")
@@ -1227,10 +1246,10 @@ def load_analyse(cfg):
         plt.legend()
         plt.show()
 
-# %% tags=[] jupyter={"outputs_hidden": true}
+# %%
 load_analyse(Config)
 
-# %% tags=[]
+# %%
 train_analyse(Config)
 
 
@@ -1350,6 +1369,70 @@ def in_sample_plots(cfg):
     plt.show()
 
 # %%
+# def in_sample_plots(cfg):
+#     # instantiate grass model
+#     model = instantiate(cfg.model).model
+        
+#     training_test_data = pickle_load('training_test_data.pickle')
+#     anchor_point = training_test_data['anchor_point']
+#     s_train = training_test_data['s_train']
+#     Ws_train = training_test_data['Ws_train']
+#     s_test = training_test_data['s_test']
+#     Ws_test = training_test_data['Ws_test']
+#     log_Ws_train = training_test_data['log_Ws_train']
+#     log_Ws_test = training_test_data['log_Ws_test']
+    
+#     svi_key = random.PRNGKey(cfg.svi.seed)
+#     maxiter = cfg.svi.maxiter
+#     step_size = cfg.svi.step_size
+#     svi_results = pickle_load('svi_results.pickle')
+    
+#     inference_data = pickle_load('inference_data.pickle')
+    
+#     # get initialisation from SVI results
+#     map_est = svi_results.params
+#     strip_val = len('_auto_loc')
+#     init_values = {key[:-strip_val]:value for (key, value) in map_est.items()}
+        
+#     samples = dict(filter(lambda elem: 'initial_value' not in elem[0], inference_data.items()))
+#     initial_values = dict(filter(lambda elem: 'initial_value' in elem[0], inference_data.items()))
+#     assert set(samples.keys()).union(initial_values.keys()) == set(inference_data.keys())
+    
+#     tol=1e-5
+#     samples_Ws_train = pickle_load("samples_Ws_train.pickle")
+#     for ws in samples_Ws_train:
+#         assert vmap(lambda w: valid_grass_point(w, tol=tol))(ws).all()
+        
+        
+#     mcmc_barycenters = pickle_load("mcmc_barycenters.pickle")
+    
+#     in_sample_errors_df = pickle_load("in_sample_errors_df.pickle")
+#     # plt.plot(s_train,in_sample_errors_df['errors'])
+#     # plt.show()
+
+#     samples_alphas_train = pickle_load("samples_alphas_train.pickle")
+        
+#     # percentile_levels = [2.5, 97.5]
+#     # conf_level = percentile_levels[-1] - percentile_levels[0]
+#     # percentiles = np.percentile(samples_alphas_train, np.array(percentile_levels), axis=0)
+#     # lower = percentiles[0,:]
+#     # upper = percentiles[1,:]
+#     fig = plt.figure(figsize=(12,7))
+#     ax = fig.add_subplot(111)
+#     ax.plot(s_test, alphas, c='black', alpha=0.5, label='test data')
+#     ax.scatter(s_train, alphas_train, label='train data', c='g')
+#     ax.scatter(s_train, samples_alphas_train.mean(axis=0), label='mean of HMC samples', c='r')
+#     # ax.fill_between(s_train, lower, upper,  color='lightblue', alpha=0.75,label=f'{conf_level}% credible interval')
+#     for a in samples_alphas_train:
+#         ax.plot(s_train,a,c='lightblue',alpha=0.5)
+#     ax.set_xlabel(r"$s$")
+#     ax.set_ylabel(r"$\alpha(s)$")
+#     ax.legend()
+#     ax.grid()
+#     # fig.savefig('in-sample-subspace-angle-plot.png',dpi=300,bbox_inches='tight',facecolor="w")
+#     plt.show()
+
+# %%
 in_sample_plots(Config)
 
 # %%
@@ -1363,7 +1446,7 @@ in_sample_errors_df.describe()
 
 # %%
 def out_of_sample_pred_plots(cfg):
-    plt.rc('text', usetex=True)
+    # plt.rc('text', usetex=True)
     plt.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
     Deltas_means = pickle_load("Deltas_means.pickle")
     Deltas_preds = pickle_load("Deltas_preds.pickle")
@@ -1427,6 +1510,72 @@ def out_of_sample_pred_plots(cfg):
 
 
 # %%
+# def out_of_sample_pred_plots(cfg):
+#     # plt.rc('text', usetex=True)
+#     plt.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
+#     Deltas_means = pickle_load("Deltas_means.pickle")
+#     Deltas_preds = pickle_load("Deltas_preds.pickle")
+#     assert np.isnan(Deltas_means).sum() == 0
+#     assert np.isnan(Deltas_preds).sum() == 0
+    
+#     fig, axs = plt.subplots(2,1,figsize=(12,12),sharey=False)
+#     ordinals_dict = {1: 'st', 2: 'nd', 3: 'rd'}
+#     percentile_levels = [2.5, 97.5]
+#     conf_level = percentile_levels[-1] - percentile_levels[0]
+#     for i in range(d):
+#         obs = log_Ws_train[:,i,0]
+#         means = Deltas_means[:,:,i,0]
+#         means_avg = np.mean(means, axis=0)
+#         preds = Deltas_preds[:,:,i,0]
+#         percentiles = np.percentile(preds, np.array(percentile_levels), axis=0)
+#         lower = percentiles[0,:]
+#         upper = percentiles[1,:]
+#         axs[i].plot(s_test, log_Ws_test[:,i,0], label='test data',c='black', alpha=0.75, linestyle='dashed')
+#         axs[i].scatter(s_train, log_Ws_train[:,i,0], label='train data', c='g')
+#         axs[i].plot(s_test, means_avg, label='averaged mean prediction', c='r', alpha=0.75)
+#         axs[i].fill_between(s_test, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
+#         axs[i].set_xlabel(r"$s$")
+#         axs[i].grid()
+#         axs[i].legend()
+#         # axs[i].vlines(s_train, 0.99*lower.min(), 1.01*upper.max(), colors='green', linestyles='dashed')
+#         axs[i].set_title(f'{i+1}{ordinals_dict[i+1]} component of ' + r'$\mathbf{U}(s)$')
+    
+#     axs[0].set_ylim([-0.01,0.01])
+#     # fig.savefig('out-sample-tangent-predictions-plot.png',dpi=300,bbox_inches='tight',facecolor="w")
+#     plt.show()
+
+#     Ws_means = pickle_load("Ws_means.pickle")
+#     Ws_preds = pickle_load("Ws_preds.pickle")
+#     assert np.isnan(Ws_means).sum() == 0
+#     assert np.isnan(Ws_preds).sum() == 0
+    
+#     alphas_means = pickle_load("alpha_means.pickle")
+#     alphas_preds = pickle_load("alpha_preds.pickle")
+    
+#     percentile_levels = [2.5, 97.5]
+#     conf_level = percentile_levels[-1] - percentile_levels[0]
+#     alphas_means_avg = np.mean(alphas_means, axis=0)
+#     # percentiles = np.percentile(alphas_preds, np.array(percentile_levels), axis=0)
+#     # lower = percentiles[0,:]
+#     # upper = percentiles[1,:]
+#     fig = plt.figure(figsize=(12,6))
+#     ax = fig.add_subplot(111)
+#     ax.plot(s_test, alphas, label='test data',c='black', alpha=0.75, linestyle='dashed')
+#     ax.scatter(s_train, alphas_train, label='train data', c='g')
+#     ax.plot(s_test, alphas_means_avg, label='averaged mean prediction', c='r', alpha=0.75)
+#     # ax.fill_between(s_test, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
+#     for a in alphas_preds:
+#         ax.plot(s_test, a, color='lightblue', alpha=0.5)
+#     ax.set_xlabel(r"$s$")
+#     ax.set_ylabel(r"$\alpha(s)$")
+#     ax.legend()
+#     ax.grid()
+#     # ax.vlines(s_train, 0, np.pi, colors='green', linestyles='dashed')
+#     # ax.set_title(f"predictions for subspace angles")
+#     fig.savefig('out-sample-subspace-angle-plot.png',dpi=300,bbox_inches='tight',facecolor="w")
+#     plt.show()
+
+# %%
 out_of_sample_pred_plots(Config)
 
 # %%
@@ -1454,5 +1603,32 @@ plt.show()
 
 # %%
 out_sample_errors_df.describe()
+
+# %%
+Deltas_means = pickle_load("Deltas_means.pickle")
+Deltas_preds = pickle_load("Deltas_preds.pickle")
+
+# %%
+plt.rcParams["figure.figsize"] = (12,6)
+percentile_levels = [2.5, 97.5]
+conf_level = percentile_levels[-1] - percentile_levels[0]
+for i in range(d):
+    obs = log_Ws_train[:,i,0]
+    means = Deltas_means[:,:,i,0]
+    means_avg = np.mean(means, axis=0)
+    preds = Deltas_preds[:,:,i,0]
+    percentiles = np.percentile(preds, np.array(percentile_levels), axis=0)
+    lower = percentiles[0,:]
+    upper = percentiles[1,:]
+    plt.plot(s_test, log_Ws_test[:,i,0], label='full data',c='black', alpha=0.75, linestyle='dashed')
+    plt.scatter(s_train, log_Ws_train[:,i,0], label='training data', c='g')
+    plt.plot(s_test, means_avg, label='averaged mean prediction', c='r', alpha=0.75)
+    plt.fill_between(s_test, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
+    plt.xlabel(r"$s$")
+    plt.legend()
+    plt.vlines(s_train, 0.99*lower.min(), 1.01*upper.max(), colors='green', linestyles='dashed')
+    plt.title(f"{i+1}th component of tangents")
+    # plt.ylim((-0.5,0.5))
+    plt.show()
 
 # %%

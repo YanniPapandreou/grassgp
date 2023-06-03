@@ -85,3 +85,9 @@ paper/article.bbl
 paper/article.blg
 examples/wing_function_example/.ipynb_checkpoints
 examples/wing_function_example/.jukit
+examples/paper_examples/.ipynb_checkpoints
+examples/bayes_opt_example/.ipynb_checkpoints
+examples/bayes_opt_example/basic_bayes_opt.ipynb
+examples/local_AS/.ipynb_checkpoints
+examples/parametrised_pde_example/.ipynb_checkpoints
+examples/parametrised_pde_example/2D_example/.ipynb_checkpoints

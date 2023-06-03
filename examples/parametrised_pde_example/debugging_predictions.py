@@ -320,35 +320,71 @@ def predict(key, Omega_diag_chol, var, noise, length, U, ell):
 
 
 # %%
-key = random.PRNGKey(275437)
-Omega_diag_chol = samples['Omega_diag_chol'][0]
-var = 1.0
-noise = 0.0
-length = float(samples['kernel_length'][0])
-U = anchor_point.copy()
-ell = config.model.ell
-post_mean, post_pred = predict(key, Omega_diag_chol, var, noise, length, U, ell)
+# key = random.PRNGKey(275437)
+# Omega_diag_chol = samples['Omega_diag_chol'][0]
+# var = 1.0
+# noise = 0.0
+# length = float(samples['kernel_length'][0])
+# U = anchor_point.copy()
+# ell = config.model.ell
+# post_mean, post_pred = predict(key, Omega_diag_chol, var, noise, length, U, ell)
 
 # %%
-var = 1.0
-noise = 0.0
-U = anchor_point.copy()
-ell = config.model.ell
+# var = 1.0
+# noise = 0.0
+# U = anchor_point.copy()
+# ell = config.model.ell
 
-post_means = []
-post_preds = []
-key = random.PRNGKey(34563)
-keys = random.split(key,3500)
-for i in tqdm(range(3500)):
-    Omega_diag_chol = samples['Omega_diag_chol'][i]
-    length = float(samples['kernel_length'][i])
-    post_mean, post_pred = predict(key, Omega_diag_chol, var, noise, length, U, ell)
-    post_means.append(post_mean)
-    post_preds.append(post_pred)
+# post_means = []
+# post_preds = []
+# key = random.PRNGKey(34563)
+# keys = random.split(key,3500)
+# for i in tqdm(range(3500)):
+#     Omega_diag_chol = samples['Omega_diag_chol'][i]
+#     length = float(samples['kernel_length'][i])
+#     post_mean, post_pred = predict(key, Omega_diag_chol, var, noise, length, U, ell)
+#     post_means.append(post_mean)
+#     post_preds.append(post_pred)
 
-post_means = np.array(post_means)
-post_preds = np.array(post_preds)
+# post_means = np.array(post_means)
+# post_preds = np.array(post_preds)
 
 # %%
-pickle_save(post_means, "debugging_preds_means.pickle")
-pickle_save(post_preds, "debugging_preds_preds.pickle")
+# pickle_save(post_means, "debugging_preds_means.pickle")
+# pickle_save(post_preds, "debugging_preds_preds.pickle")
+
+# %%
+post_means = pickle_load("debugging_preds_means.pickle")
+post_preds = pickle_load("debugging_preds_preds.pickle")
+
+# %%
+post_means.shape
+
+# %%
+i=0
+percentile_levels = [2.5, 97.5]
+conf_level = percentile_levels[-1] - percentile_levels[0]
+in_preds = samples['Deltas'][:,:,i,0]
+percentiles = np.percentile(in_preds, np.array(percentile_levels), axis=0)
+lower = percentiles[0,:]
+upper = percentiles[1,:]
+plt.plot(s_test, log_Ws_test[:,i,0], label='full data',c='black', alpha=0.75, linestyle='dashed')
+plt.scatter(s_train, log_Ws_train[:,i,0], label='training data', c='g')
+plt.plot(s_train, samples['Deltas'].mean(axis=0)[:,i,0],c='red',label='in-mean')
+plt.fill_between(s_train, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
+
+means = Deltas_means[:,:,i,0]
+means_avg = np.mean(means, axis=0)
+preds = Deltas_preds[:,:,i,0]
+out_percentiles = np.percentile(preds, np.array(percentile_levels), axis=0)
+out_lower = out_percentiles[0,:]
+out_upper = out_percentiles[1,:]
+plt.plot(s_test, means_avg, label='averaged mean prediction (out)', c='purple', alpha=0.75)
+plt.fill_between(s_test, out_lower, out_upper, color='coral', alpha=0.5, label=f'{conf_level}% credible interval')
+plt.xlabel(r"$s$")
+plt.legend()
+plt.vlines(s_train, 0.99*lower.min(), 1.01*upper.max(), colors='green', linestyles='dashed')
+# plt.title(f"{i+1}th component of tangents")
+plt.show()
+
+# %%

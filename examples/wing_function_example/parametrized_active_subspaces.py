@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -337,7 +337,7 @@ Config = make_config(
 numpyro.render_model(instantiate(Config.model), model_args=(s_train,log_Ws_train))
 
 
-# %% tags=[]
+# %%
 def train(cfg):
     # instantiate grass model
     model = instantiate(cfg.model)
@@ -431,7 +431,7 @@ for key in my_samples.keys():
 my_samples[trace_plot_vars].plot(subplots=True, figsize=(10,40), sharey=False)
 plt.show()
 
-# %% tags=[]
+# %%
 for var in trace_plot_vars:
     sm.graphics.tsa.plot_acf(my_samples[var], lags=100)
     plt.title(f"acf for {var}")

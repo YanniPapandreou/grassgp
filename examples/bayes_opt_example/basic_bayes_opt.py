@@ -188,6 +188,54 @@ def plot_optimisation_of_acquisition(xn,yn,xtest,opt_posterior,xtrain,ytrain,bet
     plt.show()
 
 
+# %%
+def bayesOpt(key, f, xtrain, ytrain, xtest, ytest, plot_bools, x0_s = None, N=25, n_opt=5, lower=0.5, upper=2.5):
+    if x0_s is None:
+        x0_s = jnp.linspace(lower,upper,n_opt).reshape(-1,1)
+        
+    current_min_loc = ytrain.argmin()
+    current_min_y = ytrain[current_min_loc]
+    current_min_x = xtrain[current_min_loc]
+    mins = [jnp.hstack((current_min_x, current_min_y))]
+    
+    for i in tqdm(range(N)):
+        # split key
+        key, _ = jr.split(key)
+
+        # fit gp
+        opt_posterior = fit_gp(xtrain,ytrain,key,plot_training_loss=plot_bools['gp_training_loss'])
+
+        if plot_bools['gp_fit_and_acquisition']:
+            # plot results of gp fit together with acquisition func
+            plot_posterior_and_acquisition(xtest, opt_posterior, xtrain, ytrain)
+
+        # optimise acquisition function
+        xn_s, lcb_vals = optimise_acquisition(x0_s, opt_posterior, xtrain, ytrain, lower, upper)
+
+        # take xn which has smallest lcb value
+        xn = xn_s[lcb_vals.argmin()]
+        # compute yn
+        yn = f(xn)
+
+        if plot_bools['optimisation_of_acquisition']:
+            # plot results of optimisation of acquisition
+            plot_optimisation_of_acquisition(xn,yn,xtest,opt_posterior,xtrain,ytrain)
+
+        # update dataset
+        xtrain = jnp.vstack((xtrain,xn))
+        ytrain = jnp.vstack((ytrain,yn))
+        
+        # update current min
+        if yn < current_min_y:
+            current_min_y = yn
+            current_min_x = xn
+        
+        mins.append(jnp.hstack((current_min_x,current_min_y)))
+        
+    mins = jnp.array(mins)
+    return xtrain, ytrain, mins, opt_posterior
+
+
 # %% [markdown]
 # # Black-box function
 #
@@ -223,49 +271,58 @@ plt.title("Initial observations")
 plt.show()
 
 # %%
-N = 25
-n_opt = 5
-
-lower = 0.5
-upper = 2.5
-
-x0_s = jnp.linspace(lower,upper,n_opt).reshape(-1,1)
-
 plot_bools = {
     'gp_training_loss': False,
     'gp_fit_and_acquisition': False,
     'optimisation_of_acquisition': False
 }
 
-for i in tqdm(range(N)):
-    # split key
-    key, _ = jr.split(key)
+x, y, mins, opt_posterior = bayesOpt(key, f, x, y, xtest, ytest, plot_bools)
+
+# %% jupyter={"source_hidden": true}
+# N = 25
+# n_opt = 5
+
+# lower = 0.5
+# upper = 2.5
+
+# x0_s = jnp.linspace(lower,upper,n_opt).reshape(-1,1)
+
+# plot_bools = {
+#     'gp_training_loss': False,
+#     'gp_fit_and_acquisition': False,
+#     'optimisation_of_acquisition': False
+# }
+
+# for i in tqdm(range(N)):
+#     # split key
+#     key, _ = jr.split(key)
     
-    # fit gp
-    opt_posterior = fit_gp(x,y,key,plot_training_loss=plot_bools['gp_training_loss'])
+#     # fit gp
+#     opt_posterior = fit_gp(x,y,key,plot_training_loss=plot_bools['gp_training_loss'])
     
-    if plot_bools['gp_fit_and_acquisition']:
-        # plot results of gp fit together with acquisition func
-        plot_posterior_and_acquisition(xtest, opt_posterior, x, y)
+#     if plot_bools['gp_fit_and_acquisition']:
+#         # plot results of gp fit together with acquisition func
+#         plot_posterior_and_acquisition(xtest, opt_posterior, x, y)
     
-    # optimise acquisition function
-    xn_s, lcb_vals = optimise_acquisition(x0_s, opt_posterior, x, y, lower, upper)
+#     # optimise acquisition function
+#     xn_s, lcb_vals = optimise_acquisition(x0_s, opt_posterior, x, y, lower, upper)
     
-    # take xn which has smallest lcb value
-    xn = xn_s[lcb_vals.argmin()]
-    # compute yn
-    yn = f(xn)
+#     # take xn which has smallest lcb value
+#     xn = xn_s[lcb_vals.argmin()]
+#     # compute yn
+#     yn = f(xn)
     
-    if plot_bools['optimisation_of_acquisition']:
-        # plot results of optimisation of acquisition
-        plot_optimisation_of_acquisition(xn,yn,xtest,opt_posterior,x,y)
+#     if plot_bools['optimisation_of_acquisition']:
+#         # plot results of optimisation of acquisition
+#         plot_optimisation_of_acquisition(xn,yn,xtest,opt_posterior,x,y)
     
-    # update dataset
-    x = jnp.vstack((x,xn))
-    y = jnp.vstack((y,yn))
+#     # update dataset
+#     x = jnp.vstack((x,xn))
+#     y = jnp.vstack((y,yn))
 
 # %%
-x[y.argmin()]
+assert x[y.argmin()]==mins[-1,0]
 
 # %%
 plot_posterior_and_acquisition(xtest,opt_posterior,x,y)
@@ -298,3 +355,14 @@ jnp.abs(y_dagger - y_star)
 
 # %%
 jnp.abs(x_dagger - x_star)
+
+# %%
+plt.plot(mins[:,1])
+plt.show()
+
+# %%
+plt.plot(jnp.log(mins[:,1] - y_dagger))
+plt.title("Log-regret")
+plt.show()
+
+# %%
