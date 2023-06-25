@@ -113,11 +113,11 @@ ps = rand(Normal(), (dSq,M));
 
 β = 1.0
 ϕ, λ_KL = eigenpairs(β, d)
-n_x = 8
-n_y = 8
+n_x = 12
+n_y = 12
 
-x_vals = range(0, stop=1, length=n_x)
-y_vals = range(0, stop=1, length=n_y)
+x_vals = range(0.05, stop=1-0.05, length=n_x)
+y_vals = range(0.05, stop=1-0.05, length=n_y)
 
 xs = []
 for x ∈ x_vals
