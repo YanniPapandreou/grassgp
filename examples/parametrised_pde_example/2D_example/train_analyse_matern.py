@@ -744,6 +744,401 @@ def train(cfg):
 
 
 # %%
-train(Config)
+# train(Config)
+
+# %%
+def predict_tangents(
+    key: chex.ArrayDevice,
+    s_test: chex.ArrayDevice,
+    s_train: chex.ArrayDevice,
+    Vs_train: chex.ArrayDevice,
+    cfg,
+    samples: dict,
+    n_samples: Union[int,None] = None,
+    jitter: float = 1e-8
+) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
+    
+    d_in = cfg.model.d_in
+    U = np.array(cfg.model.anchor_point)
+    d, n = U.shape
+    cov_jitter = cfg.model.cov_jitter
+    k_include_noise = cfg.model.k_include_noise
+    kern_jitter = cfg.model.jitter
+    if n_samples is None:
+        n_samples = cfg.train.n_samples // cfg.train.n_thinning
+        assert n_samples == samples['Deltas'].shape[0]
+    
+    def predict(
+        key: chex.ArrayDevice,
+        Omega_diag_chol: chex.ArrayDevice,
+        var: float,
+        length: float,
+        noise: float,
+    ) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
+        # iniatilize GrassGP
+        kernel_params = {'var': var, 'length': length, 'noise': noise}
+        k = lambda t, s: rbf(t, s, kernel_params, jitter=kern_jitter, include_noise=k_include_noise)
+        mu = lambda s: zero_mean(s, d, n)
+        grass_gp = GrassGP(d_in=d_in, d_out=(d, n), mu=mu, k=k, Omega_diag_chol=Omega_diag_chol, U=U, cov_jitter=cov_jitter)
+
+        # predict
+        Deltas_mean, Deltas_pred = grass_gp.predict_tangents_new(key, s_test, s_train, Vs_train, cfg.model.ell, jitter=jitter)
+        return Deltas_mean, Deltas_pred
+
+    # initialize vmap args
+    vmap_args = (random.split(key, n_samples),)
+    
+    cfg_Omega_diag_chol = cfg.model.Omega_diag_chol
+    cfg_var = cfg.model.var
+    cfg_length = cfg.model.length
+    cfg_noise = cfg.model.noise
+    cfg_require_noise = cfg.model.require_noise
+    
+    if cfg_Omega_diag_chol is None:
+        vmap_args += (samples['Omega_diag_chol'],)
+    else:
+        cfg_Omega_diag_chol = np.array(cfg_Omega_diag_chol)
+        vmap_args += (np.repeat(cfg_Omega_diag_chol[None,:,:], n_samples, axis=0),)
+    
+    if cfg_var is None:
+        vmap_args += (samples['kernel_var'],)
+    else:
+        vmap_args += (cfg_var * np.ones(n_samples),)
+        
+    if cfg_length is None:
+        vmap_args += (samples['kernel_length'],)
+    else:
+        vmap_args += (cfg_length * np.ones(n_samples),)
+        
+    if cfg_require_noise:
+        if cfg_noise is None:
+            vmap_args += (samples['kernel_noise'],)
+        else:
+            vmap_args += (cfg_noise * np.ones(n_samples),)
+    else:
+        vmap_args += (np.zeros(n_samples),)
+    
+    assert len(vmap_args) == 5
+    # Deltas_means, Deltas_preds = vmap(predict)(*vmap_args)
+    Deltas_means = []
+    Deltas_preds = []
+    for i in tqdm(range(n_samples)):
+        rand_key = vmap_args[0][i]
+        Omega_diag_chol = vmap_args[1][i]
+        var = vmap_args[2][i]
+        length = vmap_args[3][i]
+        noise = vmap_args[4][i]
+        mean, pred = predict(rand_key, Omega_diag_chol, var, length, noise)
+        Deltas_means.append(mean)
+        Deltas_preds.append(pred)
+    
+    Deltas_means = np.array(Deltas_means)
+    Deltas_preds = np.array(Deltas_preds)
+    return Deltas_means, Deltas_preds
+
+
+# %%
+def analyse(cfg):
+    # instantiate grass model
+    model = instantiate(cfg.model).model
+    
+    save_results = cfg.save_results
+    plot_figs = cfg.plots.plot
+    save_stdout = cfg.save_stdout
+    
+    anchor_point = np.array(cfg.model.anchor_point)
+    s_train = np.array(cfg.model.s_train)
+    Ws_train = np.array(cfg.model.Ws_train)
+    s_test = np.array(cfg.model.s_test)
+    Ws_test = np.array(cfg.model.Ws_test)
+    
+    log_Ws_train = vmap(lambda W: grass_log(anchor_point, W))(Ws_train)
+    log_Ws_test = vmap(lambda W: grass_log(anchor_point, W))(Ws_test)
+    
+    inference_data = pickle_load("inference_data.pickle")
+    samples = dict(filter(lambda elem: 'initial_value' not in elem[0], inference_data.items()))
+    initial_values = dict(filter(lambda elem: 'initial_value' in elem[0], inference_data.items()))
+    assert set(samples.keys()).union(initial_values.keys()) == set(inference_data.keys())
+    
+    if plot_figs:
+        my_samples = flatten_samples(samples, ignore=[])
+        trace_plot_vars = ['kernel_length']
+        # for key in my_samples.keys():
+        #     if 'Omega' in key:
+        #         trace_plot_vars.append(key)
+        #     if 'sigmas' in key:
+        #         trace_plot_vars.append(key)
+
+        my_samples[trace_plot_vars].plot(subplots=True, figsize=(10,6), sharey=False)
+        plt.show()
+
+        for var in trace_plot_vars:
+            sm.graphics.tsa.plot_acf(my_samples[var], lags=Config.plots.acf_lags)
+            plt.title(f"acf for {var}")
+            plt.show()
+            
+        trace_plot_vars = []
+        for name in my_samples.columns:
+            if "Omega" in name:
+                trace_plot_vars.append(name)
+                
+        my_samples.plot(y=trace_plot_vars,legend=False,alpha=0.75)
+        plt.show()
+
+    # compute Ws's from mcmc samples
+    tol=1e-5
+    samples_Ws_train = vmap(lambda Deltas: convert_to_projs(Deltas, anchor_point, reorthonormalize=False))(samples['Deltas'])
+    for ws in samples_Ws_train:
+        assert vmap(lambda w: valid_grass_point(w, tol=tol))(ws).all()
+        
+    if save_results:
+        pickle_save(samples_Ws_train, "samples_Ws_train.pickle")
+        
+    mcmc_barycenters = []
+    for i in tqdm(range(s_train.shape[0])):
+        points = samples_Ws_train[:,i,:,:]
+        barycenter, _, _ = sample_karcher_mean(points)
+        mcmc_barycenters.append(barycenter)
+        
+    mcmc_barycenters = np.array(mcmc_barycenters)
+    
+    if save_results:
+        pickle_save(mcmc_barycenters, "mcmc_barycenters.pickle")
+    
+    in_sample_errors = vmap(grass_dist)(Ws_train, mcmc_barycenters)
+    
+    if plot_figs:
+        fig, ax = plt.subplots()
+        tcf = ax.tricontourf(s_train[:,0],s_train[:,1],in_sample_errors)
+        fig.colorbar(tcf)
+        plt.show()
+    
+    sd_s_train = []
+    for i in tqdm(range(s_train.shape[0])):
+        fixed = mcmc_barycenters[i]
+        dists = vmap(lambda W: grass_dist(W, fixed))(samples_Ws_train[:,i,:,:])
+        dists_Sq = dists**2
+        sd_s_train.append(np.sqrt(dists_Sq.mean()))
+    sd_s_train = np.array(sd_s_train)
+    
+    pd_data = {'x': s_train[:,0], 'y': s_train[:,1], 'errors': in_sample_errors, 'sd': sd_s_train}
+    in_sample_errors_df = pd.DataFrame(data=pd_data)
+    
+    if save_results:
+        pickle_save(in_sample_errors_df, "in_sample_errors_df.pickle")
+    
+    print("Prediction starting")
+    pred_key = random.PRNGKey(cfg.predict.seed)
+    Deltas_means, Deltas_preds = predict_tangents(pred_key, s_test, s_train, log_Ws_train, cfg, samples)
+    assert np.isnan(Deltas_means).sum() == 0
+    assert np.isnan(Deltas_preds).sum() == 0
+    
+    if save_results:
+        pickle_save(Deltas_means, "Deltas_means.pickle")
+        pickle_save(Deltas_preds, "Deltas_preds.pickle")
+    
+    Ws_means = vmap(lambda i: convert_to_projs(Deltas_means[i], anchor_point, reorthonormalize=cfg.model.reorthonormalize))(np.arange(Deltas_means.shape[0]))
+    Ws_preds = vmap(lambda i: convert_to_projs(Deltas_preds[i], anchor_point, reorthonormalize=cfg.model.reorthonormalize))(np.arange(Deltas_preds.shape[0]))
+    assert np.isnan(Ws_means).sum() == 0
+    assert np.isnan(Ws_preds).sum() == 0
+    
+    if save_results:
+        pickle_save(Ws_means, "Ws_means.pickle")
+        pickle_save(Ws_preds, "Ws_preds.pickle")
+    
+    test_means_mcmc_barycenters = []
+    for i in tqdm(range(s_test.shape[0])):
+        points = Ws_means[:,i,:,:]
+        barycenter, _, _ = sample_karcher_mean(points)
+        test_means_mcmc_barycenters.append(barycenter)
+        
+    test_preds_mcmc_barycenters = []
+    for i in tqdm(range(s_test.shape[0])):
+        points = Ws_preds[:,i,:,:]
+        barycenter, _, _ = sample_karcher_mean(points)
+        test_preds_mcmc_barycenters.append(barycenter)
+        
+    test_means_mcmc_barycenters = np.array(test_means_mcmc_barycenters)
+    test_preds_mcmc_barycenters = np.array(test_preds_mcmc_barycenters)
+    
+    if save_results:
+        pickle_save(test_means_mcmc_barycenters, "test_means_mcmc_barycenters.pickle")
+        pickle_save(test_preds_mcmc_barycenters, "test_preds_mcmc_barycenters.pickle")
+    
+    out_sample_mean_errors = vmap(grass_dist)(Ws_test, test_means_mcmc_barycenters)
+    out_sample_pred_errors = vmap(grass_dist)(Ws_test, test_preds_mcmc_barycenters)
+    
+    # if plot_figs:
+#         plt.plot(s_test,out_sample_mean_errors, label='error using means')
+#         plt.plot(s_test,out_sample_pred_errors, label='error using preds')
+#         plt.vlines(s_train, 0, 1, colors="green", linestyles="dashed")
+#         plt.legend()
+#         plt.show()
+        
+    sd_s_test_means = []
+    for i in tqdm(range(s_test.shape[0])):
+        fixed = test_preds_mcmc_barycenters[i]
+        dists = vmap(lambda W: grass_dist(W, fixed))(Ws_means[:,i,:,:])
+        dists_Sq = dists**2
+        sd_s_test_means.append(np.sqrt(dists_Sq.mean()))
+        
+    sd_s_test_preds = []
+    for i in tqdm(range(s_test.shape[0])):
+        fixed = test_preds_mcmc_barycenters[i]
+        dists = vmap(lambda W: grass_dist(W, fixed))(Ws_preds[:,i,:,:])
+        dists_Sq = dists**2
+        sd_s_test_preds.append(np.sqrt(dists_Sq.mean()))
+    
+    sd_s_test_means = np.array(sd_s_test_means)
+    sd_s_test_preds = np.array(sd_s_test_preds)
+    
+    test_pd_data = {'x': s_test[:,0], 'y': s_test[:,1], 'errors_mean': out_sample_mean_errors, 'errors_pred': out_sample_pred_errors, 'sd_mean': sd_s_test_means, 'sd_pred': sd_s_test_preds}
+    out_sample_errors_df = pd.DataFrame(data=test_pd_data)
+    
+    if save_results:
+        pickle_save(out_sample_errors_df, "out_sample_errors_df.pickle")
+
+
+# %%
+# analyse(Config)
+
+# %%
+def task_function(cfg):
+    train_start_time = time.time()
+    train(cfg)
+    train_end_time = time.time()
+    train_elapsed_time = train_end_time - train_start_time
+    print(f"Training took {train_elapsed_time:.2f} seconds")
+    
+    analyse_start_time = time.time()
+    analyse(cfg)
+    analyse_end_time = time.time()
+    analyse_elapsed_time = analyse_end_time - analyse_start_time
+    print(f"Analyse phase took {analyse_elapsed_time:.2f} seconds")
+
+
+# %%
+(jobs,) = launch(
+    Config,
+    task_function,
+    overrides=[
+        "model.ell=0.01,0.001,0.0001",
+        "model.cov_jitter=0.0001"
+    ],
+    multirun=True,
+)
+
+# %%
+# cfg = Config
+
+# anchor_point = np.array(cfg.model.anchor_point)
+# s_train = np.array(cfg.model.s_train)
+# Ws_train = np.array(cfg.model.Ws_train)
+# s_test = np.array(cfg.model.s_test)
+# Ws_test = np.array(cfg.model.Ws_test)
+
+# log_Ws_train = vmap(lambda W: grass_log(anchor_point, W))(Ws_train)
+# log_Ws_test = vmap(lambda W: grass_log(anchor_point, W))(Ws_test)
+
+# inference_data = pickle_load("inference_data.pickle")
+# samples = dict(filter(lambda elem: 'initial_value' not in elem[0], inference_data.items()))
+# initial_values = dict(filter(lambda elem: 'initial_value' in elem[0], inference_data.items()))
+# assert set(samples.keys()).union(initial_values.keys()) == set(inference_data.keys())
+
+
+# my_samples = flatten_samples(samples, ignore=[])
+# trace_plot_vars = ['kernel_length']
+# # for key in my_samples.keys():
+# #     if 'Omega' in key:
+# #         trace_plot_vars.append(key)
+# #     if 'sigmas' in key:
+# #         trace_plot_vars.append(key)
+
+# my_samples[trace_plot_vars].plot(subplots=True, figsize=(10,6), sharey=False)
+# plt.show()
+
+# %%
+# for var in trace_plot_vars:
+#     sm.graphics.tsa.plot_acf(my_samples[var], lags=Config.plots.acf_lags)
+#     plt.title(f"acf for {var}")
+#     plt.show()
+
+# trace_plot_vars = []
+# for name in my_samples.columns:
+#     if "Omega" in name:
+#         trace_plot_vars.append(name)
+
+# my_samples.plot(y=trace_plot_vars,legend=False,alpha=0.75)
+# plt.show()
+
+# %%
+# trace_plot_vars = []
+# for name in my_samples.columns:
+#     if "Omega" in name:
+#         sm.graphics.tsa.plot_acf(my_samples[name], lags=Config.plots.acf_lags)
+#         plt.title(name)
+#         plt.show()
+
+# %%
+# in_sample_errors_df = pickle_load("in_sample_errors_df.pickle")
+
+# %%
+# in_sample_errors_df.head()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(in_sample_errors_df['x'],in_sample_errors_df['y'],in_sample_errors_df['errors'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r')
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(in_sample_errors_df['x'],in_sample_errors_df['y'],in_sample_errors_df['sd'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r')
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# out_sample_errors_df = pickle_load("out_sample_errors_df.pickle")
+# out_sample_errors_df.head()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(out_sample_errors_df['x'],out_sample_errors_df['y'],out_sample_errors_df['errors_mean'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r',marker='x')
+# ax.scatter(out_sample_errors_df['x'],out_sample_errors_df['y'],c='black',alpha=0.25)
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(out_sample_errors_df['x'],out_sample_errors_df['y'],out_sample_errors_df['errors_pred'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r',marker='x')
+# ax.scatter(out_sample_errors_df['x'],out_sample_errors_df['y'],c='black',alpha=0.25)
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(out_sample_errors_df['x'],out_sample_errors_df['y'],out_sample_errors_df['sd_mean'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r',marker='x')
+# ax.scatter(out_sample_errors_df['x'],out_sample_errors_df['y'],c='black',alpha=0.25)
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(out_sample_errors_df['x'],out_sample_errors_df['y'],out_sample_errors_df['sd_pred'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r',marker='x')
+# ax.scatter(out_sample_errors_df['x'],out_sample_errors_df['y'],c='black',alpha=0.25)
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# in_sample_errors_df.describe()
+
+# %%
+# out_sample_errors_df.describe()
 
 # %%
