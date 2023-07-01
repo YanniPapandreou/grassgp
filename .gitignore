@@ -95,3 +95,9 @@ examples/parametrised_ode_example/.ipynb_checkpoints
 .direnv
 examples/parametrised_ode_example/old_files
 examples/visualisation_example/.ipynb_checkpoints
+examples/visualisation_example/results.ipynb
+examples/visualisation_example/train_analyse.ipynb
+examples/visualisation_example/working_version.ipynb
+examples/visualisation_example/working_version.py
+examples/parametrised_pde_example/reports
+examples/parametrised_pde_example/train_analyse_matern.ipynb

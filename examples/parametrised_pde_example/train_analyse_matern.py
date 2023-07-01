@@ -55,10 +55,10 @@ import matplotlib.pyplot as plt
 plt.rcParams["figure.figsize"] = (10,6)
 
 # %%
-xs = np.load("xs_matern.npz")
+xs = np.load("xs.npz")
 
 # %%
-Ws = np.load("Ws_mater.npz")
+Ws = np.load("Ws.npz")
 
 # %%
 assert vmap(lambda W: valid_grass_point(W[:,None]))(Ws.T).all()
@@ -68,53 +68,28 @@ i=0
 W0 = Ws.T[i][:,None]
 
 # %%
-# dists = vmap(lambda W: grass_dist(W[:,None], W0))(Ws.T)
+dists = vmap(lambda W: grass_dist(W[:,None], W0))(Ws.T)
 
 # %%
-# plt.plot(xs,dists)
-# plt.title(r"Grassmann distantance from $P(0)$")
-# plt.xlabel(r"$x$")
-# plt.grid()
-# plt.show()
-
-# %%
-# angles = vmap(lambda W: np.arccos(np.inner(W0.flatten(),W)))(Ws.T)
-
-# %%
-# plt.plot(xs,angles)
-# plt.title(r"Angle between $P(x)$ and $P(0)$")
-# plt.xlabel(r"$x$")
-# plt.grid()
-# plt.show()
+fig, ax = plt.subplots()
+tcf = ax.tricontourf(xs[:,0],xs[:,1],dists)
+fig.colorbar(tcf)
+plt.show()
 
 # %%
 s_test = xs.copy()
 Ws_test = Ws.T.copy()[:,:,None]
-s_gap = 4
-s_train = s_test[::s_gap].copy()
+s_gap = 3
+s_train = s_test[::s_gap,:].copy()
 Ws_train = Ws_test[::s_gap,:,:].copy()
 
 
 # %%
-# plt.plot(s_test,dists)
-# plt.scatter(s_train,dists[::s_gap])
+# plt.scatter(s_test[:,0], s_test[:,1],label='test')
+# plt.scatter(s_train[:,0], s_train[:,1],label='train')
 # plt.grid()
+# plt.legend()
 # plt.show()
-
-# %%
-# anchors = []
-# losses = []
-# N_anchor_inits = 20
-# keys = random.split(random.PRNGKey(2346),N_anchor_inits)
-# for key in tqdm(keys):
-#     mu_0 = rand_grass_point(key, 100, 1)
-#     anchor, _, _ = sample_karcher_mean(Ws_train, start_ind = None, start_point=mu_0)
-#     loss = vmap(lambda W: grass_dist(W,anchor)**2)(Ws_train).sum()
-#     anchors.append(anchor)
-#     losses.append(loss)
-
-# anchors = np.array(anchors)
-# losses = np.array(losses)
 
 # %% [markdown]
 # # Model
@@ -128,11 +103,6 @@ def run_svi_for_map(rng_key, model, maxiter, step_size, *args):
     svi_results = svi.run(rng_key, maxiter, *args)
     print('\nSVI elapsed time:', time.time() - start)
     return svi_results
-
-# %%
-# n_train = len(s_train)
-# plt.scatter(range(n_train),s_train)
-# plt.show()
 
 # %%
 anchor_point, _, _ = sample_karcher_mean(Ws_train)
@@ -637,7 +607,7 @@ TangentSpaceModelConf = builds(Model, populate_full_signature=True)
 my_model_conf = TangentSpaceModelConf(
     name = "My Model",
     anchor_point = anchor_point.tolist(),
-    d_in = 1,
+    d_in = 2,
     Omega_diag_chol = None,
     k_include_noise= True,
     var = 1.0,
@@ -774,101 +744,7 @@ def train(cfg):
 
 
 # %%
-# assert (vmap(lambda i: vmap(valid_grass_point)(Ws_means[i]))(np.arange(Ws_means.shape[0]))).all()
-# assert (vmap(lambda i: vmap(lambda W: valid_grass_point(W, tol=1e-02))(Ws_preds[i]))(np.arange(Ws_preds.shape[0]))).all()
-
-# %%
 # train(Config)
-
-# %%
-# def predict_tangents(
-#     key: chex.ArrayDevice,
-#     s_test: chex.ArrayDevice,
-#     s_train: chex.ArrayDevice,
-#     Vs_train: chex.ArrayDevice,
-#     cfg,
-#     samples: dict,
-#     n_samples: Union[int,None] = None,
-#     jitter: float = 1e-8
-# ) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
-    
-#     d_in = cfg.model.d_in
-#     U = np.array(cfg.model.anchor_point)
-#     d, n = U.shape
-#     cov_jitter = cfg.model.cov_jitter
-#     k_include_noise = cfg.model.k_include_noise
-#     kern_jitter = cfg.model.jitter
-#     if n_samples is None:
-#         n_samples = cfg.train.n_samples // cfg.train.n_thinning
-#         assert n_samples == samples['Deltas'].shape[0]
-    
-#     def predict(
-#         key: chex.ArrayDevice,
-#         Omega_diag_chol: chex.ArrayDevice,
-#         var: float,
-#         length: float,
-#         noise: float,
-#     ) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
-#         # iniatilize GrassGP
-#         kernel_params = {'var': var, 'length': length, 'noise': noise}
-#         k = lambda t, s: rbf(t, s, kernel_params, jitter=kern_jitter, include_noise=k_include_noise)
-#         mu = lambda s: zero_mean(s, d, n)
-#         grass_gp = GrassGP(d_in=d_in, d_out=(d, n), mu=mu, k=k, Omega_diag_chol=Omega_diag_chol, U=U, cov_jitter=cov_jitter)
-
-#         # predict
-#         Deltas_mean, Deltas_pred = grass_gp.predict_tangents(key, s_test, s_train, Vs_train, jitter=jitter)
-#         return Deltas_mean, Deltas_pred
-
-#     # initialize vmap args
-#     vmap_args = (random.split(key, n_samples),)
-    
-#     cfg_Omega_diag_chol = cfg.model.Omega_diag_chol
-#     cfg_var = cfg.model.var
-#     cfg_length = cfg.model.length
-#     cfg_noise = cfg.model.noise
-#     cfg_require_noise = cfg.model.require_noise
-    
-#     if cfg_Omega_diag_chol is None:
-#         vmap_args += (samples['Omega_diag_chol'],)
-#     else:
-#         cfg_Omega_diag_chol = np.array(cfg_Omega_diag_chol)
-#         vmap_args += (np.repeat(cfg_Omega_diag_chol[None,:,:], n_samples, axis=0),)
-    
-#     if cfg_var is None:
-#         vmap_args += (samples['kernel_var'],)
-#     else:
-#         vmap_args += (cfg_var * np.ones(n_samples),)
-        
-#     if cfg_length is None:
-#         vmap_args += (samples['kernel_length'],)
-#     else:
-#         vmap_args += (cfg_length * np.ones(n_samples),)
-        
-#     if cfg_require_noise:
-#         if cfg_noise is None:
-#             vmap_args += (samples['kernel_noise'],)
-#         else:
-#             vmap_args += (cfg_noise * np.ones(n_samples),)
-#     else:
-#         vmap_args += (np.zeros(n_samples),)
-    
-#     assert len(vmap_args) == 5
-#     # Deltas_means, Deltas_preds = vmap(predict)(*vmap_args)
-#     Deltas_means = []
-#     Deltas_preds = []
-#     for i in tqdm(range(n_samples)):
-#         rand_key = vmap_args[0][i]
-#         Omega_diag_chol = vmap_args[1][i]
-#         var = vmap_args[2][i]
-#         length = vmap_args[3][i]
-#         noise = vmap_args[4][i]
-#         mean, pred = predict(rand_key, Omega_diag_chol, var, length, noise)
-#         Deltas_means.append(mean)
-#         Deltas_preds.append(pred)
-    
-#     Deltas_means = np.array(Deltas_means)
-#     Deltas_preds = np.array(Deltas_preds)
-#     return Deltas_means, Deltas_preds
 
 # %%
 def predict_tangents(
@@ -962,95 +838,6 @@ def predict_tangents(
 
 
 # %%
-# def predict_grass(
-#     key: chex.ArrayDevice,
-#     s_test: chex.ArrayDevice,
-#     s_train: chex.ArrayDevice,
-#     Vs_train: chex.ArrayDevice,
-#     cfg,
-#     samples: dict,
-#     jitter: float = 1e-8,
-#     reortho: bool = False
-# ) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
-    
-#     d_in = cfg.model.d_in
-#     U = np.array(cfg.model.anchor_point)
-#     d, n = U.shape
-#     cov_jitter = cfg.model.cov_jitter
-#     k_include_noise = cfg.model.k_include_noise
-#     kern_jitter = cfg.model.jitter
-#     n_samples = cfg.train.n_samples // cfg.train.n_thinning
-#     assert n_samples == samples['Deltas'].shape[0]
-    
-#     def predict(
-#         key: chex.ArrayDevice,
-#         Omega_diag_chol: chex.ArrayDevice,
-#         var: float,
-#         length: float,
-#         noise: float,
-#     ) -> Tuple[chex.ArrayDevice, chex.ArrayDevice]:
-#         # iniatilize GrassGP
-#         kernel_params = {'var': var, 'length': length, 'noise': noise}
-#         k = lambda t, s: rbf(t, s, kernel_params, jitter=kern_jitter, include_noise=k_include_noise)
-#         mu = lambda s: zero_mean(s, d, n)
-#         grass_gp = GrassGP(d_in=d_in, d_out=(d, n), mu=mu, k=k, Omega_diag_chol=Omega_diag_chol, U=U, cov_jitter=cov_jitter)
-
-#         # predict
-#         Ws_mean, Ws_pred = grass_gp.predict_grass(key, s_test, s_train, Vs_train, jitter=jitter, reortho=reortho)
-#         return Ws_mean, Ws_pred
-
-#     # initialize vmap args
-#     vmap_args = (random.split(key, n_samples),)
-    
-#     cfg_Omega_diag_chol = cfg.model.Omega_diag_chol
-#     cfg_var = cfg.model.var
-#     cfg_length = cfg.model.length
-#     cfg_noise = cfg.model.noise
-#     cfg_require_noise = cfg.model.require_noise
-    
-#     if cfg_Omega_diag_chol is None:
-#         vmap_args += (samples['Omega_diag_chol'],)
-#     else:
-#         cfg_Omega_diag_chol = np.array(cfg_Omega_diag_chol)
-#         vmap_args += (np.repeat(cfg_Omega_diag_chol[None,:,:], n_samples, axis=0),)
-    
-#     if cfg_var is None:
-#         vmap_args += (samples['kernel_var'],)
-#     else:
-#         vmap_args += (cfg_var * np.ones(n_samples),)
-        
-#     if cfg_length is None:
-#         vmap_args += (samples['kernel_length'],)
-#     else:
-#         vmap_args += (cfg_length * np.ones(n_samples),)
-        
-#     if cfg_require_noise:
-#         if cfg_noise is None:
-#             vmap_args += (samples['kernel_noise'],)
-#         else:
-#             vmap_args += (cfg_noise * np.ones(n_samples),)
-#     else:
-#         vmap_args += (np.zeros(n_samples),)
-    
-#     assert len(vmap_args) == 5
-#     # Ws_means, Ws_preds = vmap(predict)(*vmap_args)
-#     Ws_means = []
-#     Ws_preds = []
-#     for i in tqdm(range(n_samples)):
-#         rand_key = vmap_args[0][i]
-#         Omega_diag_chol = vmap_args[1][i]
-#         var = vmap_args[2][i]
-#         length = vmap_args[3][i]
-#         noise = vmap_args[4][i]
-#         mean, pred = predict(rand_key, Omega_diag_chol, var, length, noise)
-#         Ws_means.append(mean)
-#         Ws_preds.append(pred)
-    
-#     Ws_means = np.array(Ws_means)
-#     Ws_preds = np.array(Ws_preds)
-#     return Ws_means, Ws_preds
-
-# %%
 def analyse(cfg):
     # instantiate grass model
     model = instantiate(cfg.model).model
@@ -1121,7 +908,9 @@ def analyse(cfg):
     in_sample_errors = vmap(grass_dist)(Ws_train, mcmc_barycenters)
     
     if plot_figs:
-        plt.plot(s_train,in_sample_errors)
+        fig, ax = plt.subplots()
+        tcf = ax.tricontourf(s_train[:,0],s_train[:,1],in_sample_errors)
+        fig.colorbar(tcf)
         plt.show()
     
     sd_s_train = []
@@ -1132,7 +921,7 @@ def analyse(cfg):
         sd_s_train.append(np.sqrt(dists_Sq.mean()))
     sd_s_train = np.array(sd_s_train)
     
-    pd_data = {'s': s_train, 'errors': in_sample_errors, 'sd': sd_s_train}
+    pd_data = {'x': s_train[:,0], 'y': s_train[:,1], 'errors': in_sample_errors, 'sd': sd_s_train}
     in_sample_errors_df = pd.DataFrame(data=pd_data)
     
     if save_results:
@@ -1179,12 +968,12 @@ def analyse(cfg):
     out_sample_mean_errors = vmap(grass_dist)(Ws_test, test_means_mcmc_barycenters)
     out_sample_pred_errors = vmap(grass_dist)(Ws_test, test_preds_mcmc_barycenters)
     
-    if plot_figs:
-        plt.plot(s_test,out_sample_mean_errors, label='error using means')
-        plt.plot(s_test,out_sample_pred_errors, label='error using preds')
-        plt.vlines(s_train, 0, 1, colors="green", linestyles="dashed")
-        plt.legend()
-        plt.show()
+    # if plot_figs:
+#         plt.plot(s_test,out_sample_mean_errors, label='error using means')
+#         plt.plot(s_test,out_sample_pred_errors, label='error using preds')
+#         plt.vlines(s_train, 0, 1, colors="green", linestyles="dashed")
+#         plt.legend()
+#         plt.show()
         
     sd_s_test_means = []
     for i in tqdm(range(s_test.shape[0])):
@@ -1203,7 +992,7 @@ def analyse(cfg):
     sd_s_test_means = np.array(sd_s_test_means)
     sd_s_test_preds = np.array(sd_s_test_preds)
     
-    test_pd_data = {'s': s_test, 'errors_mean': out_sample_mean_errors, 'errors_pred': out_sample_pred_errors, 'sd_mean': sd_s_test_means, 'sd_pred': sd_s_test_preds}
+    test_pd_data = {'x': s_test[:,0], 'y': s_test[:,1], 'errors_mean': out_sample_mean_errors, 'errors_pred': out_sample_pred_errors, 'sd_mean': sd_s_test_means, 'sd_pred': sd_s_test_preds}
     out_sample_errors_df = pd.DataFrame(data=test_pd_data)
     
     if save_results:
@@ -1233,108 +1022,14 @@ def task_function(cfg):
     Config,
     task_function,
     overrides=[
-        "model.ell=0.001",
+        "model.ell=0.01,0.001,0.0001",
         "model.cov_jitter=0.0001"
     ],
     multirun=True,
 )
 
 # %%
-# Deltas_means = pickle_load("Deltas_means.pickle")
-# Deltas_preds = pickle_load("Deltas_preds.pickle")
-
-# %%
-# plt.rcParams["figure.figsize"] = (12,6)
-# percentile_levels = [2.5, 97.5]
-# conf_level = percentile_levels[-1] - percentile_levels[0]
-# for i in range(10):
-#     obs = log_Ws_train[:,i,0]
-#     means = Deltas_means[:,:,i,0]
-#     means_avg = np.mean(means, axis=0)
-#     preds = Deltas_preds[:,:,i,0]
-#     percentiles = np.percentile(preds, np.array(percentile_levels), axis=0)
-#     lower = percentiles[0,:]
-#     upper = percentiles[1,:]
-#     plt.plot(s_test, log_Ws_test[:,i,0], label='full data',c='black', alpha=0.75, linestyle='dashed')
-#     plt.scatter(s_train, log_Ws_train[:,i,0], label='training data', c='g')
-#     plt.plot(s_test, means_avg, label='averaged mean prediction', c='r', alpha=0.75)
-#     plt.fill_between(s_test, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
-#     plt.xlabel(r"$s$")
-#     plt.legend()
-#     plt.vlines(s_train, 0.99*lower.min(), 1.01*upper.max(), colors='green', linestyles='dashed')
-#     plt.title(f"{i+1}th component of tangents")
-#     plt.ylim((-0.5,0.5))
-#     plt.show()
-
-# %%
-# plt.rcParams["figure.figsize"] = (12,6)
-# percentile_levels = [2.5, 97.5]
-# conf_level = percentile_levels[-1] - percentile_levels[0]
-# for i in range(10):
-#     obs = Ws_train[:,i,0]
-#     means = Ws_means[:,:,i,0]
-#     means_avg = np.mean(means, axis=0)
-#     preds = Ws_preds[:,:,i,0]
-#     percentiles = np.percentile(preds, np.array(percentile_levels), axis=0)
-#     lower = percentiles[0,:]
-#     upper = percentiles[1,:]
-#     plt.plot(s_test, Ws_test[:,i,0], label='full data',c='black', alpha=0.75, linestyle='dashed')
-#     plt.scatter(s_train, Ws_train[:,i,0], label='training data', c='g')
-#     plt.plot(s_test, means_avg, label='averaged mean prediction', c='r', alpha=0.75)
-#     plt.fill_between(s_test, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
-#     plt.xlabel(r"$s$")
-#     plt.legend()
-#     plt.vlines(s_train, 0.99*lower.min(), 1.01*upper.max(), colors='green', linestyles='dashed')
-#     plt.title(f"{i+1}th component of projections")
-#     plt.ylim((-1,1))
-#     plt.show()
-
-# %%
-# in_sample_errors_df = pickle_load("in_sample_errors_df.pickle")
-
-# %%
-# plt.plot(s_train,in_sample_errors_df['errors'])
-# plt.show()
-
-# %%
-# out_sample_errors_df = pickle_load("out_sample_errors_df.pickle")
-
-# %%
-# out_sample_mean_errors = out_sample_errors_df["errors_mean"]
-# out_sample_pred_errors = out_sample_errors_df["errors_pred"]
-# sd_s_test_means = out_sample_errors_df["sd_mean"]
-# sd_s_test_preds = out_sample_errors_df["sd_pred"]
-# upper_mean = out_sample_mean_errors + sd_s_test_means
-# upper_pred = out_sample_pred_errors + sd_s_test_preds
-
-# fig = plt.figure(figsize=(12,6))
-# ax = fig.add_subplot(111)
-# ax.plot(s_test,out_sample_mean_errors, c='k', alpha=0.75, label='error using means')
-# ax.plot(s_test,out_sample_pred_errors, c='b', alpha=0.75, label='error using preds')
-# ax.vlines(s_train, 0, 0.1, colors="green", linestyles="dashed")
-# ax.fill_between(s_test, np.array(out_sample_pred_errors), np.array(upper_pred), color='lightblue', alpha=0.75, label=f'error + 1 std using means')
-# ax.fill_between(s_test, np.array(out_sample_mean_errors), np.array(upper_mean), color='coral', alpha=0.75, label=f'error + 1 std using preds')
-# ax.set_xlabel(r"$s$")
-# ax.legend()
-# ax.grid()
-# # fig.savefig('out-sample-error-plot.png',dpi=300,bbox_inches='tight',facecolor="w")
-# plt.show()
-
-# %%
-# plt.plot(s_test,out_sample_mean_errors, label='error using means')
-# plt.plot(s_test,out_sample_pred_errors, label='error using preds')
-# plt.vlines(s_train, 0, 0.1, colors="green", linestyles="dashed")
-# plt.legend()
-# plt.show()
-
-# %%
 # cfg = Config
-# # instantiate grass model
-# model = instantiate(cfg.model).model
-
-# save_results = cfg.save_results
-# plot_figs = cfg.plots.plot
-# save_stdout = cfg.save_stdout
 
 # anchor_point = np.array(cfg.model.anchor_point)
 # s_train = np.array(cfg.model.s_train)
@@ -1350,15 +1045,100 @@ def task_function(cfg):
 # initial_values = dict(filter(lambda elem: 'initial_value' in elem[0], inference_data.items()))
 # assert set(samples.keys()).union(initial_values.keys()) == set(inference_data.keys())
 
-# i=0
-# percentile_levels = [2.5, 97.5]
-# conf_level = percentile_levels[-1] - percentile_levels[0]
-# in_preds = samples['Deltas'][:,:,i,0]
-# percentiles = np.percentile(in_preds, np.array(percentile_levels), axis=0)
-# lower = percentiles[0,:]
-# upper = percentiles[1,:]
-# plt.plot(s_test, log_Ws_test[:,i,0], label='full data',c='black', alpha=0.75, linestyle='dashed')
-# plt.scatter(s_train, log_Ws_train[:,i,0], label='training data', c='g')
-# plt.plot(s_train, samples['Deltas'].mean(axis=0)[:,i,0],c='red')
-# plt.fill_between(s_train, lower, upper, color='lightblue', alpha=0.75, label=f'{conf_level}% credible interval')
+
+# my_samples = flatten_samples(samples, ignore=[])
+# trace_plot_vars = ['kernel_length']
+# # for key in my_samples.keys():
+# #     if 'Omega' in key:
+# #         trace_plot_vars.append(key)
+# #     if 'sigmas' in key:
+# #         trace_plot_vars.append(key)
+
+# my_samples[trace_plot_vars].plot(subplots=True, figsize=(10,6), sharey=False)
 # plt.show()
+
+# %%
+# for var in trace_plot_vars:
+#     sm.graphics.tsa.plot_acf(my_samples[var], lags=Config.plots.acf_lags)
+#     plt.title(f"acf for {var}")
+#     plt.show()
+
+# trace_plot_vars = []
+# for name in my_samples.columns:
+#     if "Omega" in name:
+#         trace_plot_vars.append(name)
+
+# my_samples.plot(y=trace_plot_vars,legend=False,alpha=0.75)
+# plt.show()
+
+# %%
+# trace_plot_vars = []
+# for name in my_samples.columns:
+#     if "Omega" in name:
+#         sm.graphics.tsa.plot_acf(my_samples[name], lags=Config.plots.acf_lags)
+#         plt.title(name)
+#         plt.show()
+
+# %%
+# in_sample_errors_df = pickle_load("in_sample_errors_df.pickle")
+
+# %%
+# in_sample_errors_df.head()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(in_sample_errors_df['x'],in_sample_errors_df['y'],in_sample_errors_df['errors'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r')
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(in_sample_errors_df['x'],in_sample_errors_df['y'],in_sample_errors_df['sd'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r')
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# out_sample_errors_df = pickle_load("out_sample_errors_df.pickle")
+# out_sample_errors_df.head()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(out_sample_errors_df['x'],out_sample_errors_df['y'],out_sample_errors_df['errors_mean'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r',marker='x')
+# ax.scatter(out_sample_errors_df['x'],out_sample_errors_df['y'],c='black',alpha=0.25)
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(out_sample_errors_df['x'],out_sample_errors_df['y'],out_sample_errors_df['errors_pred'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r',marker='x')
+# ax.scatter(out_sample_errors_df['x'],out_sample_errors_df['y'],c='black',alpha=0.25)
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(out_sample_errors_df['x'],out_sample_errors_df['y'],out_sample_errors_df['sd_mean'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r',marker='x')
+# ax.scatter(out_sample_errors_df['x'],out_sample_errors_df['y'],c='black',alpha=0.25)
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# fig, ax = plt.subplots()
+# tcf = ax.tricontourf(out_sample_errors_df['x'],out_sample_errors_df['y'],out_sample_errors_df['sd_pred'])
+# ax.scatter(in_sample_errors_df['x'],in_sample_errors_df['y'],c='r',marker='x')
+# ax.scatter(out_sample_errors_df['x'],out_sample_errors_df['y'],c='black',alpha=0.25)
+# fig.colorbar(tcf)
+# plt.show()
+
+# %%
+# in_sample_errors_df.describe()
+
+# %%
+# out_sample_errors_df.describe()
+
+# %%
