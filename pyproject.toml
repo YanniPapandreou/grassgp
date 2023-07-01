@@ -7,23 +7,18 @@ readme = "README.md"
 packages = [{include = "grassgp", from = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = "^3.10"
 numpyro = {git = "https://github.com/pyro-ppl/numpyro"}
 mlkernels = "^0.3.6"
 pymanopt = "^2.0.1"
 hydra-zen = "0.10.0"
-beartype = ">=0.13.1,<0.14.0"
+beartype = "^0.11.0"
 graphviz = "^0.20.1"
 chex = "^0.1.5"
 rieoptax = {git = "https://github.com/SaitejaUtpala/rieoptax.git"}
 statsmodels = "^0.13.5"
 qc-procrustes = {git = "https://github.com/theochem/procrustes"}
 scikit-learn = "^1.2.1"
-joypy = "^0.2.6"
-gpjax = "^0.6.1"
-jaxopt = "^0.6"
-plotly = "^5.14.1"
-jupyter-dash = "^0.4.2"
 
 
 [tool.poetry.group.test.dependencies]
