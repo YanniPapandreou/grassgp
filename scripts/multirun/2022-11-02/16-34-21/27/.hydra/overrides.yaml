@@ -1,5 +1,0 @@
-- train.n_subsample_gap=2
-- dataset_path=/home/yanni/projects/grassgp/scripts/multirun/2022-11-02/16-10-34/3
-- inner_model.grass_config.reorthonormalize=True
-- inner_model.grass_config.Omega=[[1.0,0.0],[0.0,1.0]]
-- inner_model.grass_config.proj_locs=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
