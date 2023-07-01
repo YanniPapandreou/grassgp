@@ -91,3 +91,7 @@ examples/bayes_opt_example/basic_bayes_opt.ipynb
 examples/local_AS/.ipynb_checkpoints
 examples/parametrised_pde_example/.ipynb_checkpoints
 examples/parametrised_pde_example/2D_example/.ipynb_checkpoints
+examples/parametrised_ode_example/.ipynb_checkpoints
+.direnv
+examples/parametrised_ode_example/old_files
+examples/visualisation_example/.ipynb_checkpoints
