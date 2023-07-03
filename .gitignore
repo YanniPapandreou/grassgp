@@ -101,3 +101,5 @@ examples/visualisation_example/working_version.ipynb
 examples/visualisation_example/working_version.py
 examples/parametrised_pde_example/reports
 examples/parametrised_pde_example/train_analyse_matern.ipynb
+examples/parametrised_ode_example/convert-data-to-numpy.ipynb
+examples/parametrised_ode_example/train_analyse.ipynb

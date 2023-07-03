@@ -55,22 +55,21 @@ import matplotlib.pyplot as plt
 plt.rcParams["figure.figsize"] = (10,6)
 
 # %%
-xs = np.load("xs_matern.npz")
+xs = np.load("data/xs.npz")
 
 # %%
-Ws = np.load("Ws_matern.npz")
+Ws = np.load("data/Ws.npz")
 
 # %%
 assert vmap(lambda W: valid_grass_point(W[:,None]))(Ws.T).all()
 
 # %%
-i=0
-W0 = Ws.T[i][:,None]
+# i=0
+# W0 = Ws.T[i][:,None]
+# # W0 = np.eye(100)[:,0][:,None]
 
-# %%
 # dists = vmap(lambda W: grass_dist(W[:,None], W0))(Ws.T)
 
-# %%
 # plt.plot(xs,dists)
 # plt.title(r"Grassmann distantance from $P(0)$")
 # plt.xlabel(r"$x$")
@@ -1228,7 +1227,7 @@ def task_function(cfg):
     print(f"Analyse phase took {analyse_elapsed_time:.2f} seconds")
 
 
-# %% jupyter={"outputs_hidden": true} tags=[]
+# %% tags=[]
 (jobs,) = launch(
     Config,
     task_function,

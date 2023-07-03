@@ -14,7 +14,7 @@ function eigenpairs(β,d)
     # form eigenpairs
     Φ = √(d) * spectrum.vectors
     # ϕ(x::Float64,i::Int) = linear_interpolation(xs, Φ[:,i])(x)
-    lin_itps = map(i -> linear_interpolations(xs, Φ[:,i]))(x)
+    lin_itps = map(i -> linear_interpolation(xs, Φ[:,i]), 1:d)
     ϕ(x::Float64,i::Int) = lin_itps[i](x)
     λ = spectrum.values / d
     return ϕ, λ
@@ -118,4 +118,4 @@ for (i,x) ∈ enumerate(xs)
     push!(AS_results, result)
 end
 
-save("matern_ode_data.jld", "AS_results", AS_results)
+save("data/matern_ode_data.jld", "AS_results", AS_results)
