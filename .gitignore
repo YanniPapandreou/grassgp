@@ -103,3 +103,7 @@ examples/parametrised_pde_example/reports
 examples/parametrised_pde_example/train_analyse_matern.ipynb
 examples/parametrised_ode_example/convert-data-to-numpy.ipynb
 examples/parametrised_ode_example/train_analyse.ipynb
+examples/parametrised_ode_example/multirun/*
+examples/parametrised_pde_example/multirun/*
+examples/parametrised_pde_example/results.ipynb
+examples/parametrised_pde_example/train_analyse.ipynb
