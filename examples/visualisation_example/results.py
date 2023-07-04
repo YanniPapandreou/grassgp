@@ -358,11 +358,6 @@ def in_sample_plots(cfg):
     plt.show()
 
 # %%
-in_sample_errors_df = pickle_load("in_sample_errors_df.pickle")
-plt.plot(s_train,in_sample_errors_df['errors'])
-plt.show()
-
-# %%
 in_sample_plots(config)
 
 # %%

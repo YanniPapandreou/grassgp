@@ -124,13 +124,16 @@ anchor_point = np.array(training_test_data['anchor_point'])
 
 d, n = anchor_point.shape
 
+# %%
+print(f"Number of training points = {s_train.shape[0]}")
+
 # %% tags=[]
 assert vmap(lambda W: valid_grass_point(W))(Ws_test).all()
 
 # %% tags=[]
 i=0
-# W0 = Ws_test[i]
-W0 = np.eye(100)[:,0][:,None]
+W0 = Ws_test[i]
+# W0 = np.eye(100)[:,0][:,None]
 
 dists = vmap(lambda W: grass_dist(W, W0))(Ws_test)
 
@@ -177,20 +180,20 @@ my_samples.plot(y=trace_plot_vars,legend=False,alpha=0.75)
 plt.show()
 
 # %% tags=[]
-trace_plot_vars = []
-for name in my_samples.columns:
-    if "Omega" in name:
-        plt.plot(my_samples[name])
-        plt.title(name)
-        plt.show()
+# trace_plot_vars = []
+# for name in my_samples.columns:
+#     if "Omega" in name:
+#         plt.plot(my_samples[name])
+#         plt.title(name)
+#         plt.show()
 
 # %% tags=[]
-trace_plot_vars = []
-for name in my_samples.columns:
-    if "Omega" in name:
-        sm.graphics.tsa.plot_acf(my_samples[name], lags=config.plots.acf_lags)
-        plt.title(name)
-        plt.show()
+# trace_plot_vars = []
+# for name in my_samples.columns:
+#     if "Omega" in name:
+#         sm.graphics.tsa.plot_acf(my_samples[name], lags=config.plots.acf_lags)
+#         plt.title(name)
+#         plt.show()
 
 # %% tags=[]
 in_sample_errors_df = pickle_load(job_path / "in_sample_errors_df.pickle")

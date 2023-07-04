@@ -64,17 +64,22 @@ Ws = np.load("data/Ws.npz")
 assert vmap(lambda W: valid_grass_point(W[:,None]))(Ws.T).all()
 
 # %%
-# i=0
-# W0 = Ws.T[i][:,None]
-# # W0 = np.eye(100)[:,0][:,None]
+i=0
+W0 = Ws.T[i][:,None]
+# W0 = np.eye(100)[:,8][:,None]
 
-# dists = vmap(lambda W: grass_dist(W[:,None], W0))(Ws.T)
+dists = vmap(lambda W: grass_dist(W[:,None], W0))(Ws.T)
 
-# plt.plot(xs,dists)
-# plt.title(r"Grassmann distantance from $P(0)$")
-# plt.xlabel(r"$x$")
-# plt.grid()
-# plt.show()
+plt.plot(xs,dists)
+plt.title(r"Grassmann distantance from $P(0)$")
+plt.xlabel(r"$x$")
+plt.grid()
+plt.show()
+
+# %%
+plt.plot(W0)
+plt.plot(Ws.T[-1][:,None])
+plt.show()
 
 # %%
 # angles = vmap(lambda W: np.arccos(np.inner(W0.flatten(),W)))(Ws.T)

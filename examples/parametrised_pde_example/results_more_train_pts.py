@@ -81,7 +81,7 @@ def pickle_save(obj, name: str):
 locs = [{'date': "2023-06-29", 'time': "09-49-38"}, {'date': "2023-06-28", 'time': "09-46-00"}]
 
 # %% tags=["parameters"]
-loc_id = 0
+loc_id = 1
 
 # %% tags=[]
 base_path = Path(os.getcwd())
@@ -93,6 +93,17 @@ time = locs[loc_id]['time']
 # date = "2023-06-28"
 # time = "09-46-00"
 id_num = "0"
+
+# %%
+# base_path = Path(os.getcwd())
+# output_folder = "multirun"
+# date = "2023-06-20"
+# time = "11-19-15"
+# # date = "2023-06-29"
+# # time = "09-49-38"
+# # date = "2023-06-28"
+# # time = "09-46-00"
+# id_num = "1"
 
 # %% tags=[]
 job_path = base_path / output_folder / date / time / id_num
@@ -124,19 +135,48 @@ anchor_point = np.array(training_test_data['anchor_point'])
 
 d, n = anchor_point.shape
 
+# %%
+print(f"Number of training points = {s_train.shape[0]}")
+
+# %%
+try:
+    os.makedirs(job_path / "images")
+    print("Creating image directory in job path")
+except FileExistsError:
+    print("Directory already exists; skipping.")
+
+# %%
+fig, ax = plt.subplots(figsize=(7,7))
+ax.scatter(s_test[:,0],s_test[:,1],c='b',label='test locations',alpha=1,marker='x')
+ax.scatter(s_train[:,0],s_train[:,1],c='r',label='train locations',alpha=0.75)
+ax.grid()
+ax.legend()
+ax.set_xlabel(r"$x$")
+ax.set_ylabel(r"$y$")
+ax.set_ylim((0,1))
+ax.set_xlim((0,1))
+fig.savefig(job_path / 'images/train-test-locations.pdf',dpi=300,bbox_inches='tight',facecolor="w")
+plt.show()
+
 # %% tags=[]
 assert vmap(lambda W: valid_grass_point(W))(Ws_test).all()
 
 # %% tags=[]
 i=0
-# W0 = Ws_test[i]
-W0 = np.eye(100)[:,0][:,None]
+W0 = Ws_test[i]
+# W0 = np.eye(100)[:,0][:,None]
 
 dists = vmap(lambda W: grass_dist(W, W0))(Ws_test)
 
 fig, ax = plt.subplots()
 tcf = ax.tricontourf(s_test[:,0],s_test[:,1],dists)
+# ax.scatter(s_train[:,0],s_train[:,1],c='r')
+# ax.scatter(s_test[:,0],s_test[:,1],c='b',alpha=0.5)
+ax.set_xlabel(r"$x$")
+ax.set_ylabel(r"$y$")
 fig.colorbar(tcf)
+ax.set_title(r"Grassmann distantance from $P(\mathbf{x}_{0}^{*})$")
+# fig.savefig(job_path / 'images/parametrised-pde-dataset-plot.pdf',dpi=300,bbox_inches='tight',facecolor="w")
 plt.show()
 
 # %% tags=[]
@@ -177,20 +217,20 @@ my_samples.plot(y=trace_plot_vars,legend=False,alpha=0.75)
 plt.show()
 
 # %% tags=[]
-trace_plot_vars = []
-for name in my_samples.columns:
-    if "Omega" in name:
-        plt.plot(my_samples[name])
-        plt.title(name)
-        plt.show()
+# trace_plot_vars = []
+# for name in my_samples.columns:
+#     if "Omega" in name:
+#         plt.plot(my_samples[name])
+#         plt.title(name)
+#         plt.show()
 
 # %% tags=[]
-trace_plot_vars = []
-for name in my_samples.columns:
-    if "Omega" in name:
-        sm.graphics.tsa.plot_acf(my_samples[name], lags=config.plots.acf_lags)
-        plt.title(name)
-        plt.show()
+# trace_plot_vars = []
+# for name in my_samples.columns:
+#     if "Omega" in name:
+#         sm.graphics.tsa.plot_acf(my_samples[name], lags=config.plots.acf_lags)
+#         plt.title(name)
+#         plt.show()
 
 # %% tags=[]
 in_sample_errors_df = pickle_load(job_path / "in_sample_errors_df.pickle")
@@ -257,5 +297,3 @@ ax.scatter(out_sample_errors_df['x'],out_sample_errors_df['y'],c='black',alpha=0
 fig.colorbar(tcf)
 plt.title("Out sample errors sd (using pred)")
 plt.show()
-
-# %%

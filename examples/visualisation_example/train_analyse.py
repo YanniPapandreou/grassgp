@@ -468,7 +468,7 @@ TrainConfig = make_config(
     seed = 9870687,
     n_warmup = 2000,
     n_samples = 7000,
-    n_chains = 1,
+    n_chains = 2,
     n_thinning = 2
 )
 
