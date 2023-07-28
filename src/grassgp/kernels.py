@@ -1,7 +1,7 @@
 import jax.numpy as np
 from jax import jit
 from functools import partial
-from mlkernels.jax import EQ, Delta, Matern12, Matern32, Matern52
+from mlkernels.jax import EQ, Delta, Matern52
 
 @partial(jit, static_argnums=(5, 6))
 def rbf_covariance(x, xp, var, length, noise,  jitter=1.0e-6,

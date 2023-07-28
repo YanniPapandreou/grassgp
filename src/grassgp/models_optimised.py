@@ -11,7 +11,7 @@ import numpyro
 import numpyro.distributions as dist
 import numpyro.handlers as handlers
 
-from grassgp.utils import unvec, vec, kron_solve, kron_chol
+from grassgp.utils import unvec, vec, kron_solve
 from grassgp.grassmann import convert_to_projs, valid_grass_tangent
 
 
@@ -39,7 +39,6 @@ class MatGP:
         # compute mean matrix M = [mu(s[1]), mu(s[2]), ..., mu(s[N])]
         M = np.hstack(vmap(self.mu)(s))
         assert_shape(M, (d, n*N))
-        # ! TODO: check this out
         vec_M = vec(M)
 
         # compute kernel matrix
@@ -135,7 +134,7 @@ class GrassGP:
                     custom_message=f"Omega_diag_chol has shape {self.Omega_diag_chol.shape}; expected shape {(d_n,)}")
         assert_shape(self.U, (d, n),
                     custom_message=f"U has shape {self.U.shape}; expected shape {(d, n)}")
-        tol = 1e-06
+        # tol = 1e-06
         # assert valid_grass_point(self.U), f"U is not a valid point on Grassmann manifold G({d},{n}) at tolerance level {tol = }"
 
     @property

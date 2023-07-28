@@ -132,7 +132,7 @@ class GrassGP:
                     custom_message=f"Omega has shape {self.Omega.shape}; expected shape {(d_n, d_n)}")
         assert_shape(self.U, (d, n),
                     custom_message=f"U has shape {self.U.shape}; expected shape {(d, n)}")
-        tol = 1e-06
+        # tol = 1e-06
         # assert valid_grass_point(self.U), f"U is not a valid point on Grassmann manifold G({d},{n}) at tolerance level {tol = }"
 
     @property

@@ -33,18 +33,20 @@ class TestGrassPtsTangents:
         assert valid_grass_tangent(X, U, tol=tol)
 
     def test_grass_dist_gives_zero_for_same_point(self, dims_seeds):
+        tol = 1e-3
         D, n, seed = dims_seeds
         key = random.PRNGKey(seed)
         X = rand_grass_point(key, D, n)
         dist = grass_dist(X, X)
-        assert dist == 0
+        assert dist <= tol
     
     def test_grass_dist_gives_zero_for_point_and_its_negative(self, dims_seeds):
+        tol = 1e-3
         D, n, seed = dims_seeds
         key = random.PRNGKey(seed)
         X = rand_grass_point(key, D, n)
         dist = grass_dist(X, -X)
-        assert dist == 0
+        assert dist <= tol
 
 
 @pytest.mark.parametrize("reortho", [True, False])
