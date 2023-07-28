@@ -55,10 +55,10 @@ import matplotlib.pyplot as plt
 plt.rcParams["figure.figsize"] = (10,6)
 
 # %%
-xs = np.load("xs.npz")
+xs = np.load("data/xs.npz")
 
 # %%
-Ws = np.load("Ws.npz")
+Ws = np.load("data/Ws.npz")
 
 # %%
 assert vmap(lambda W: valid_grass_point(W[:,None]))(Ws.T).all()
@@ -83,13 +83,13 @@ s_gap = 3
 s_train = s_test[::s_gap,:].copy()
 Ws_train = Ws_test[::s_gap,:,:].copy()
 
-
 # %%
-# plt.scatter(s_test[:,0], s_test[:,1],label='test')
-# plt.scatter(s_train[:,0], s_train[:,1],label='train')
-# plt.grid()
-# plt.legend()
-# plt.show()
+plt.scatter(s_test[:,0], s_test[:,1],label='test')
+plt.scatter(s_train[:,0], s_train[:,1],label='train')
+plt.grid()
+plt.legend()
+plt.show()
+
 
 # %% [markdown]
 # # Model
