@@ -109,3 +109,4 @@ examples/parametrised_pde_example/results.ipynb
 examples/parametrised_pde_example/train_analyse.ipynb
 examples/parametrised_pde_example/results_less_train_pts.ipynb
 examples/parametrised_pde_example/results_more_train_pts.ipynb
+examples/parametrised_ode_example/results.ipynb
