@@ -2,7 +2,7 @@ import pytest
 import jax.numpy as np
 import jax.numpy.linalg as lin
 from jax import random, vmap
-from grassgp.utils import vec, unvec, multiprod, multitransp, kron_solve, kron_chol
+from grassgp.utils import vec, unvec, multiprod, kron_solve, kron_chol
 
 dims = [(3,3), (1,4), (4,1), (5,2), (5,5)]
 Xs = [np.arange(dim[0] * dim[1]).reshape(dim) for dim in dims]
