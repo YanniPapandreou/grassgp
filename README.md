@@ -41,3 +41,5 @@ Steps:
     3. Open the Julia `pkg` REPL by pressing `]` from the Julia REPL. 
     4. Activate the environment contained in the repo root: `activate .`
     5. Instantiate the enviroment via: `instantiate` (this might take a while).
+9. You can now spawn a Python shell with all the dependencies using `poetry shell`.
+10. (*Alternatively/recommended*): you can launch a Jupyterlab environment containing the Python and Julia dependencies using: `poetry run jupyter lab`
